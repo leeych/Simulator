@@ -10,6 +10,7 @@ class QPushButton;
 class QLabel;
 class QPixmap;
 class QComboBox;
+class QTimer;
 
 class RoadBranchWidget : public QWidget
 {
@@ -18,22 +19,37 @@ public:
     explicit RoadBranchWidget(QWidget *parent = 0);
     ~RoadBranchWidget();
 
+    QList<int> &getLaneIdList();
+
 signals:
+    void laneIndexSignal(int);
 
 public slots:
+    void cmbItemSelectedSlot(int);
+    void flashTimerTimeoutSlot();
+    void laneIndexSlot(int);
 
 private:
     void resizeEvent(QResizeEvent *);
 
 private:
     void initPage();
+    void initSignalSlots();
     void initLaneList();
     void initLightStatus();
 
+    void updateFlashLight(int index);
+
 private:
     QList<QComboBox *> lane_cmb_list_;
-    QList<QRect> rect_list_;
+    QList<QRect> cmb_rect_list_;
+    QList<QRect> light_rect_list_;
     QList<QLabel *> lane_light_list_;
+    QList<QPixmap *> pixmap_list_;
+    QList<int> lane_id_list_;
+
+    QTimer *flash_timer_;
+    int curr_index_;        // [1,12] origin index of the roadbranch in realtime monitor
 
 };
 

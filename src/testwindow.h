@@ -10,40 +10,56 @@ class QTextBrowser;
 class QPushButton;
 class QLineEdit;
 class QComboBox;
+class QSpinBox;
+class QLabel;
 
 class RoadBranchWidget;
+
+class QTimer;
 
 class TestWindow : public QWidget
 {
     Q_OBJECT
 public:
     explicit TestWindow(QWidget *parent = 0);
+    ~TestWindow();
 
 signals:
+    void laneIndexSignal(int);
 
 public slots:
-    void openMyComSlot();
-    void closeMyComSlot();
-    void sendMsgSlot();
-    void readMyComSlot();
-
+    void startSimulatorToggledSlot(bool);
+    void sendMsgTimerTimeOutSlot();
+    void timerTimeOutSlot();
+    void openSerialTriggeredSlot(bool);
 
 private:
     void initPage();
-    void initLaneList();
     void initSignalSlots();
 
-private:
-    QTextBrowser *txt_browser_;
+    bool checkLaneId();
+    void packComData(int lane_index);
 
-    QPushButton *open_button_, *close_button_, *send_msg_button_;
-    QLineEdit *msg_lineedit_;
+    void dumpComData();
+
+private:
+    QList<QRect> rect_list_;
+    QByteArray com_array_;
+    int curr_lane_id_;
+    bool serial_status_;
+
+    QTimer *send_msg_timer_;
+    QTimer *timer_;
+
+private:
+    QLineEdit *port_lineedit_, *baud_rate_lineedit_, *data_bit_lineedit_, *stop_lineedit_, *parity_lineedit_;
+    QTextEdit *txt_edit_;
+    QSpinBox *timespan_spinbox_;
+    QPushButton *open_close_button_, *start_button_;
+    QLabel *open_tip_label_;
 
     Win_QextSerialPort *my_com_;
     RoadBranchWidget *road_branch_widget_;
-
-    QList<QComboBox *> lane_cmb_list_;
-    QList<QRect> rect_list_;
 
 };
 

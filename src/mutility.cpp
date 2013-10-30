@@ -21,7 +21,7 @@ QString MUtility::getStyleSheetDir()
 QString MUtility::getLanguageDir()
 {
     QString dir = getMainDir();
-    dir += "lanuages/";
+    dir += "languages/";
     return dir;
 }
 
