@@ -104,7 +104,7 @@ void RoadBranchWidget::initPage()
     initLaneList();
     initLightStatus();
 
-    QString qss = /*"QComboBox::hover:drop-down{border-style:none;}"*/
+    QString qss =
             "QComboBox{border-style:none;background-color:rgb(101,101,101); color:red; text-align:center;}"
             "QComboBox:hover{border:1px solid}"
             "QComboBox::drop-down{"
@@ -119,7 +119,6 @@ void RoadBranchWidget::initSignalSlots()
         connect(lane_cmb_list_.at(i), SIGNAL(activated(int)), this, SLOT(cmbItemSelectedSlot(int)));
     }
     connect(flash_timer_, SIGNAL(timeout()), this, SLOT(flashTimerTimeoutSlot()));
-//    connect(this, SIGNAL(laneIndexSignal(int)), this, SLOT(laneIndexSlot(int)));
 }
 
 void RoadBranchWidget::initLaneList()
@@ -137,9 +136,9 @@ void RoadBranchWidget::initLaneList()
         lane_cmb_list_.append(cmb);
     }
 
-    cmb_rect_list_ << QRect(195, 504, 36, 26) << QRect(10,199,36,26) << QRect(318,20,36,26) << QRect(500,321,36,26)
-                      << QRect(236,504,36,26) << QRect(10,243,36,26) << QRect(276,20,36,26) << QRect(500,280,36,26)
-                      << QRect(152,504,36,26) << QRect(10,157,36,26) << QRect(358,20,36,26) << QRect(500,363,36,26);
+    cmb_rect_list_ << QRect(194, 504, 38, 26) << QRect(9,199,38,26) << QRect(317,20,38,26) << QRect(500,321,38,26)
+                      << QRect(235,504,38,26) << QRect(9,243,38,26) << QRect(275,20,38,26) << QRect(500,280,38,26)
+                      << QRect(151,504,38,26) << QRect(9,157,38,26) << QRect(357,20,38,26) << QRect(500,363,38,26);
     for (int i = 0; i < 12; i++)
     {
         lane_cmb_list_.at(i)->setGeometry(cmb_rect_list_.at(i));
@@ -200,12 +199,6 @@ void RoadBranchWidget::updateFlashLight(int index, LightColor color)
     {
         return;
     }
-//    if (lane_light_list_.at(index)->isVisible())
-//    {
-//        lane_light_list_.at(index)->hide();
-//        lane_light_list_.at(index+12)->show();
-//        colour = Red;
-//    }
     for (int i = 0; i < 24; i++)
     {
         lane_light_list_.at(i)->hide();

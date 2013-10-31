@@ -22,8 +22,9 @@
 TestWindow::TestWindow(QWidget *parent) :
     QWidget(parent)
 {
-    struct PortSettings my_com_setting = {BAUD9600, DATA_8, PAR_NONE, STOP_1, FLOW_OFF, 500};
-    my_com_ = new Win_QextSerialPort("com1", my_com_setting, QextSerialBase::EventDriven);
+    struct PortSettings my_com_setting_ = {BAUD9600, DATA_8, PAR_NONE, STOP_1, FLOW_OFF, 500};
+    my_com_ = new Win_QextSerialPort("com1", my_com_setting_, QextSerialBase::EventDriven);
+
     curr_lane_index_ = 0;
     curr_lane_id_ = 0;
     serial_status_ = false;
@@ -66,15 +67,12 @@ void TestWindow::startSimulatorToggledSlot(bool checked)
         curr_lane_index_ = qrand() % 12;
         emit laneIndexSignal(curr_lane_index_, RoadBranchWidget::Green);
         packComData(curr_lane_index_);
-//        test();
         int sz = my_com_->write(com_array_);
         if (need_leave_)
         {
             timer_->start(qrand() % 1000 + 1000);
         }
-        txt_edit_->insertPlainText(QString(com_array_.toHex())+"\n");
-//        qDebug() << sz;
-//        dumpComData();
+        txt_edit_->insertPlainText(formatComData(com_array_)+"\n");
     }
     else
     {
@@ -82,7 +80,6 @@ void TestWindow::startSimulatorToggledSlot(bool checked)
         send_msg_timer_->stop();
         timer_->stop();
         emit enableLaneIdCmbSignal(true);
-//        emit closeLightSignal();
         road_branch_widget_->closeLightSlot();
     }
 }
@@ -106,11 +103,9 @@ void TestWindow::timerTimeOutSlot()
     memcpy(ms, &secs, sizeof(secs));
     com_array_[3] = ms[0];
     com_array_[4] = ms[1];
-    txt_edit_->insertPlainText(QString(com_array_.toHex())+"\n");
+    txt_edit_->insertPlainText(formatComData(com_array_)+"\n");
     emit laneIndexSignal(curr_lane_index_, RoadBranchWidget::Red);
     int sz = my_com_->write(com_array_);
-//    qDebug() << "leave timer time out" << endl << sz;
-//    dumpComData();
 }
 
 void TestWindow::openSerialTriggeredSlot(bool checked)
@@ -176,12 +171,16 @@ void TestWindow::initPage()
     open_tip_label_ = new QLabel;
     open_tip_label_->setMinimumWidth(20);
     txt_edit_ = new QTextEdit;
-    port_lineedit_ = new QLineEdit;
-    baud_rate_lineedit_ = new QLineEdit;
-    data_bit_lineedit_ = new QLineEdit;
-    stop_lineedit_ = new QLineEdit;
-    parity_lineedit_ = new QLineEdit;
 
+    port_cmb_ = new QComboBox;
+    baud_rate_cmb_ = new QComboBox;
+    data_bit_cmb_ = new QComboBox;
+    stop_cmb_ = new QComboBox;
+    parity_cmb_ = new QComboBox;
+
+    port_cmb_->addItem("com1");
+    port_cmb_->addItem("com2");
+/*
     port_lineedit_->setText("com1");
     baud_rate_lineedit_->setText("9600");
     data_bit_lineedit_->setText("8");
@@ -193,7 +192,7 @@ void TestWindow::initPage()
     data_bit_lineedit_->setReadOnly(true);
     stop_lineedit_->setReadOnly(true);
     parity_lineedit_->setReadOnly(true);
-
+*/
     QGroupBox *illustrate_grp = new QGroupBox;
     QString dir = MUtility::getImagesDir();
     QLabel *green_label = new QLabel;
@@ -308,6 +307,7 @@ void TestWindow::packComData(int lane_index)
     {
         com_data.type = 0x05 + '\0';
     }
+    com_data.lane_id = curr_lane_id_ + '\0';
     int secs = QDateTime::currentDateTime().toTime_t();
     memcpy(com_data.ms_time, &secs, 4);
 
@@ -319,6 +319,21 @@ void TestWindow::packComData(int lane_index)
 
     qDebug() << "lane index:" << lane_index
              << "lane id:" << curr_lane_id_ << endl;
+}
+
+QString TestWindow::formatComData(const QByteArray &array)
+{
+    QString str;
+    QByteArray tmp = array.toHex();
+
+    for (int i = 0; i < 6; i++)
+    {
+        str.append(tmp.left(2));
+        str.append(" ");
+        tmp.remove(0,2);
+    }
+
+    return str;
 }
 
 void TestWindow::dumpComData()

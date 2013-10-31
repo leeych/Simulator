@@ -42,11 +42,14 @@ private:
     void initSignalSlots();
     bool checkLaneId();
     void packComData(int lane_index);
+    QString formatComData(const QByteArray &array);
 
     void dumpComData();
     void test();
 
 private:
+    struct PortSettings my_com_setting_;
+
     QByteArray com_array_;
     int curr_lane_index_;
     int curr_lane_id_;
@@ -60,7 +63,7 @@ private:
     QList<int> lane_id_list_;
 
 private:
-    QLineEdit *port_lineedit_, *baud_rate_lineedit_, *data_bit_lineedit_, *stop_lineedit_, *parity_lineedit_;
+    QComboBox *port_cmb_, *baud_rate_cmb_, *data_bit_cmb_, *stop_cmb_, *parity_cmb_;
     QTextEdit *txt_edit_;
     QSpinBox *timespan_spinbox_;
     QPushButton *open_close_button_, *start_button_;
