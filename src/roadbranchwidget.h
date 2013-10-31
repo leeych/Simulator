@@ -18,8 +18,13 @@ class RoadBranchWidget : public QWidget
 public:
     explicit RoadBranchWidget(QWidget *parent = 0);
     ~RoadBranchWidget();
-
     QList<int> &getLaneIdList();
+
+    enum LightColor
+    {
+        Green,
+        Red
+    };
 
 signals:
     void laneIndexSignal(int);
@@ -27,7 +32,9 @@ signals:
 public slots:
     void cmbItemSelectedSlot(int);
     void flashTimerTimeoutSlot();
-    void laneIndexSlot(int);
+    void laneIndexSlot(int index, int color);
+    void closeLightSlot();
+    void enableLaneIdCmbSlot(bool enable);
 
 private:
     void resizeEvent(QResizeEvent *);
@@ -38,7 +45,7 @@ private:
     void initLaneList();
     void initLightStatus();
 
-    void updateFlashLight(int index);
+    void updateFlashLight(int index, LightColor color);
 
 private:
     QList<QComboBox *> lane_cmb_list_;

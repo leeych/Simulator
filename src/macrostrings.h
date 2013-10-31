@@ -9,6 +9,7 @@
 #define STRING_INVALID          QObject::tr("Invalid")
 #define STRING_FAILED           QObject::tr("failed")
 
+#define STRING_UI_WINDOW_TITLE  QObject::tr("Vehicle detector simulator")
 #define STRING_UI_EXISTS        QObject::tr("Already exists")
 #define STRING_UI_ASSIGNED      QObject::tr("Already assigned to")
 #define STRING_UI_OTHER         QObject::tr("Other")
@@ -29,5 +30,7 @@
 #define STRING_UI_PARITY        QObject::tr("Parity")
 #define STRING_UI_STOPBIT       QObject::tr("Stop bit")
 
+#define STRING_UI_GREEN_TIP     QObject::tr("Green arrow indicates come")
+#define STRING_UI_RED_TIP       QObject::tr("Red arrow indicates left")
 
 #endif // MACROSTRINGS_H

@@ -29,3 +29,5 @@ DESTDIR = ./
 TRANSLATIONS = $$PWD/../resource/language/simulator.ts
 
 RC_FILE = ../resource/appicon.rc
+
+RESOURCES +=

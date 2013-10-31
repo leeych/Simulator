@@ -1,7 +1,7 @@
 #include "testwindow.h"
 #include "macrostrings.h"
-#include "roadbranchwidget.h"
 #include "serialdata.h"
+#include "mutility.h"
 
 #include <QTextEdit>
 #include <QVBoxLayout>
@@ -24,14 +24,17 @@ TestWindow::TestWindow(QWidget *parent) :
 {
     struct PortSettings my_com_setting = {BAUD9600, DATA_8, PAR_NONE, STOP_1, FLOW_OFF, 500};
     my_com_ = new Win_QextSerialPort("com1", my_com_setting, QextSerialBase::EventDriven);
+    curr_lane_index_ = 0;
     curr_lane_id_ = 0;
     serial_status_ = false;
     send_msg_timer_ = new QTimer(this);
     timer_ = new QTimer(this);
+    need_leave_ = false;
 
+    setWindowTitle(STRING_UI_WINDOW_TITLE);
     initPage();
     initSignalSlots();
-    setFixedSize(804,626);
+    setFixedSize(824,606);
     start_button_->setEnabled(false);
 }
 
@@ -46,28 +49,41 @@ TestWindow::~TestWindow()
 
 void TestWindow::startSimulatorToggledSlot(bool checked)
 {
+    if (!checkLaneId())
+    {
+        start_button_->setChecked(!checked);
+        return;
+    }
     if (checked)
     {
+        emit enableLaneIdCmbSignal(false);
+        start_button_->setText(STRING_UI_STOP);
         int secs = timespan_spinbox_->value();
         send_msg_timer_->start(secs*1000);
 
-        if (!checkLaneId())
-        {
-            return;
-        }
         QTime t = QTime::currentTime();
         qsrand(t.msec() + t.second()*1000);
-        int lane_index = qrand() % 12;
-        emit laneIndexSignal(lane_index);
-        packComData(lane_index);
-        txt_edit_->insertPlainText(QString(com_array_.toHex()));
+        curr_lane_index_ = qrand() % 12;
+        emit laneIndexSignal(curr_lane_index_, RoadBranchWidget::Green);
+        packComData(curr_lane_index_);
+//        test();
         int sz = my_com_->write(com_array_);
-        qDebug() << sz;
-        dumpComData();
+        if (need_leave_)
+        {
+            timer_->start(qrand() % 1000 + 1000);
+        }
+        txt_edit_->insertPlainText(QString(com_array_.toHex())+"\n");
+//        qDebug() << sz;
+//        dumpComData();
     }
     else
     {
+        start_button_->setText(STRING_UI_START);
         send_msg_timer_->stop();
+        timer_->stop();
+        emit enableLaneIdCmbSignal(true);
+//        emit closeLightSignal();
+        road_branch_widget_->closeLightSlot();
     }
 }
 
@@ -77,6 +93,7 @@ void TestWindow::sendMsgTimerTimeOutSlot()
     {
         return;
     }
+    qDebug() << "send msg time out";
     startSimulatorToggledSlot(true);
 }
 
@@ -89,14 +106,18 @@ void TestWindow::timerTimeOutSlot()
     memcpy(ms, &secs, sizeof(secs));
     com_array_[3] = ms[0];
     com_array_[4] = ms[1];
+    txt_edit_->insertPlainText(QString(com_array_.toHex())+"\n");
+    emit laneIndexSignal(curr_lane_index_, RoadBranchWidget::Red);
     int sz = my_com_->write(com_array_);
-    qDebug() << sz;
+//    qDebug() << "leave timer time out" << endl << sz;
+//    dumpComData();
 }
 
 void TestWindow::openSerialTriggeredSlot(bool checked)
 {
     if (checked)
     {
+        open_close_button_->setText(STRING_UI_CLOSE + STRING_UI_SERIALPORT);
         bool status = my_com_->open(QIODevice::ReadWrite);
         serial_status_ = status;
         if (!status)
@@ -113,6 +134,7 @@ void TestWindow::openSerialTriggeredSlot(bool checked)
     }
     else
     {
+        open_close_button_->setText(STRING_UI_OPEN + STRING_UI_SERIALPORT);
         if (start_button_->isChecked())
         {
             startSimulatorToggledSlot(false);
@@ -120,6 +142,18 @@ void TestWindow::openSerialTriggeredSlot(bool checked)
         my_com_->close();
         open_tip_label_->clear();
         start_button_->setEnabled(false);
+    }
+}
+
+void TestWindow::closeEvent(QCloseEvent *)
+{
+    if (timer_->isActive())
+    {
+        timer_->stop();
+    }
+    if (send_msg_timer_->isActive())
+    {
+        send_msg_timer_->stop();
     }
 }
 
@@ -134,14 +168,14 @@ void TestWindow::initPage()
 
     QLabel *timespan_label = new QLabel(STRING_UI_TIMESPAN + "(s):");
     timespan_spinbox_ = new QSpinBox;
+    timespan_spinbox_->setValue(1);
     start_button_ = new QPushButton(STRING_UI_START);
     start_button_->setCheckable(true);
     open_close_button_ = new QPushButton(STRING_UI_OPEN + STRING_UI_SERIALPORT);
     open_close_button_->setCheckable(true);
     open_tip_label_ = new QLabel;
+    open_tip_label_->setMinimumWidth(20);
     txt_edit_ = new QTextEdit;
-    QGroupBox *edit_grp = new QGroupBox;
-    QVBoxLayout *edit_vlayout = new QVBoxLayout(edit_grp);
     port_lineedit_ = new QLineEdit;
     baud_rate_lineedit_ = new QLineEdit;
     data_bit_lineedit_ = new QLineEdit;
@@ -160,6 +194,22 @@ void TestWindow::initPage()
     stop_lineedit_->setReadOnly(true);
     parity_lineedit_->setReadOnly(true);
 
+    QGroupBox *illustrate_grp = new QGroupBox;
+    QString dir = MUtility::getImagesDir();
+    QLabel *green_label = new QLabel;
+    green_label->setPixmap(QPixmap(dir + "green_arrow.png"));
+    QLabel *green_tip_label = new QLabel(STRING_UI_GREEN_TIP);
+    QLabel *red_label = new QLabel;
+    red_label->setPixmap(QPixmap(dir + "red_arrow.png"));
+    QLabel *red_tip_label = new QLabel(STRING_UI_RED_TIP);
+
+    QGridLayout *illustrate_glayout = new QGridLayout;
+    illustrate_glayout->addWidget(green_label, 0, 0, 1, 1, Qt::AlignLeft);
+    illustrate_glayout->addWidget(green_tip_label, 0, 1, 1, 1, Qt::AlignLeft);
+    illustrate_glayout->addWidget(red_label, 1, 0, 1, 1, Qt::AlignLeft);
+    illustrate_glayout->addWidget(red_tip_label, 1, 1, 1, 1, Qt::AlignLeft);
+    illustrate_grp->setLayout(illustrate_glayout);
+
     QGridLayout *glayout = new QGridLayout;
     glayout->addWidget(new QLabel(STRING_UI_PORT + ":"), 0, 0, 1, 1, Qt::AlignCenter);
     glayout->addWidget(new QLabel(STRING_UI_BAUDRATE + ":"), 1, 0, 1, 1, Qt::AlignCenter);
@@ -172,27 +222,34 @@ void TestWindow::initPage()
     glayout->addWidget(data_bit_lineedit_, 2, 1, 1, 1, Qt::AlignCenter);
     glayout->addWidget(stop_lineedit_, 3, 1, 1, 1, Qt::AlignCenter);
     glayout->addWidget(parity_lineedit_, 4, 1, 1, 1, Qt::AlignCenter);
-
-    edit_vlayout->addStretch(1);
-    edit_vlayout->addLayout(glayout);
-    edit_vlayout->addStretch(1);
+    QGroupBox *param_grp = new QGroupBox;
+    param_grp->setLayout(glayout);
 
     QHBoxLayout *open_hlayout = new QHBoxLayout;
     open_hlayout->addWidget(open_close_button_, 0, Qt::AlignCenter);
     open_hlayout->addWidget(open_tip_label_, 0, Qt::AlignLeft);
-    open_hlayout->setStretch(0, 2);
-    open_hlayout->setStretch(1, 1);
-    open_hlayout->setSpacing(0);
-    edit_vlayout->addLayout(open_hlayout);
-    edit_vlayout->addStretch(1);
-
-    edit_vlayout->addWidget(txt_edit_);
+    open_hlayout->addStretch(1);
+    open_hlayout->addWidget(start_button_, 0, Qt::AlignCenter);
 
     QHBoxLayout *timespan_hlayout = new QHBoxLayout;
     timespan_hlayout->addWidget(timespan_label, 0, Qt::AlignLeft);
     timespan_hlayout->addWidget(timespan_spinbox_, 0, Qt::AlignLeft);
-    edit_vlayout->addLayout(timespan_hlayout);
-    edit_vlayout->addWidget(start_button_, 1, Qt::AlignCenter);
+
+    QGroupBox *start_grp = new QGroupBox;
+    QVBoxLayout *start_vlayout = new QVBoxLayout;
+    start_vlayout->addWidget(txt_edit_);
+    start_vlayout->addLayout(timespan_hlayout);
+    start_vlayout->addLayout(open_hlayout);
+    start_grp->setLayout(start_vlayout);
+
+    QGroupBox *edit_grp = new QGroupBox;
+    QVBoxLayout *edit_vlayout = new QVBoxLayout(edit_grp);
+    edit_vlayout->addWidget(illustrate_grp);
+    edit_vlayout->addStretch();
+    edit_vlayout->addWidget(param_grp);
+    edit_vlayout->addStretch();
+    edit_vlayout->addWidget(start_grp);
+
     edit_grp->setLayout(edit_vlayout);
 
     QHBoxLayout *hlayout = new QHBoxLayout;
@@ -212,7 +269,9 @@ void TestWindow::initPage()
 void TestWindow::initSignalSlots()
 {
     connect(start_button_, SIGNAL(toggled(bool)), this, SLOT(startSimulatorToggledSlot(bool)));
-    connect(this, SIGNAL(laneIndexSignal(int)), road_branch_widget_, SLOT(laneIndexSlot(int)));
+    connect(this, SIGNAL(laneIndexSignal(int, int)), road_branch_widget_, SLOT(laneIndexSlot(int, int)));
+//    connect(this, SIGNAL(closeLightSignal()), road_branch_widget_, SLOT(closeLightSlot()));
+    connect(this, SIGNAL(enableLaneIdCmbSignal(bool)), road_branch_widget_, SLOT(enableLaneIdCmbSlot(bool)));
     connect(send_msg_timer_, SIGNAL(timeout()), this, SLOT(sendMsgTimerTimeOutSlot()));
     connect(timer_, SIGNAL(timeout()), this, SLOT(timerTimeOutSlot()));
     connect(open_close_button_, SIGNAL(toggled(bool)), this, SLOT(openSerialTriggeredSlot(bool)));
@@ -235,10 +294,11 @@ void TestWindow::packComData(int lane_index)
     SerialData com_data;
     QList<int> lane_id_list = road_branch_widget_->getLaneIdList();
     curr_lane_id_ = lane_id_list.at(lane_index);
+    need_leave_ = false;
     if (curr_lane_id_ >= 1 && curr_lane_id_ <= 48)
     {
         com_data.type = 0x01 + '\0';
-        timer_->start(qrand() % 10000 + 1000);
+        need_leave_ = true;
     }
     else if (curr_lane_id_ <= 56)
     {
@@ -256,6 +316,9 @@ void TestWindow::packComData(int lane_index)
     com_array_.append(com_data.lane_id);
     com_array_.append(com_data.ms_time,2);
     com_array_.append(com_data.tail);
+
+    qDebug() << "lane index:" << lane_index
+             << "lane id:" << curr_lane_id_ << endl;
 }
 
 void TestWindow::dumpComData()
@@ -270,9 +333,25 @@ void TestWindow::dumpComData()
 
     int ts = 0;
     memcpy(&ts, com_data.ms_time,4);
-    qDebug() << "head:" << com_data.head
+    QString head = QString("0x%1").arg(int(com_data.head),0,16);
+    QString tail = QString("0x%1").arg(int(com_data.tail),0,16);
+    qDebug() << "head:" << head
              << "type:" << com_data.type - '\0'
              << "lane_id:" << com_data.lane_id - '\0'
              << "timespan:" << ts
-             << "tail:" << com_data.tail << endl;
+             << "tail:" << tail
+             << endl;
+}
+
+void TestWindow::test()
+{
+//    com_array_.clear();
+//    com_array_.append("F10101ed");
+    QFile file("test.dat");
+    if (!file.open(QIODevice::WriteOnly))
+    {
+        return;
+    }
+    file.write(com_array_);
+    file.close();
 }

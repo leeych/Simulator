@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QList>
+#include "roadbranchwidget.h"
 #include "win_qextserialport.h"
 
 class QTextEdit;
@@ -12,8 +13,6 @@ class QLineEdit;
 class QComboBox;
 class QSpinBox;
 class QLabel;
-
-class RoadBranchWidget;
 
 class QTimer;
 
@@ -25,7 +24,9 @@ public:
     ~TestWindow();
 
 signals:
-    void laneIndexSignal(int);
+    void laneIndexSignal(int index, int color);
+    void closeLightSignal();
+    void enableLaneIdCmbSignal(bool);
 
 public slots:
     void startSimulatorToggledSlot(bool);
@@ -34,22 +35,29 @@ public slots:
     void openSerialTriggeredSlot(bool);
 
 private:
+    void closeEvent(QCloseEvent *);
+
+private:
     void initPage();
     void initSignalSlots();
-
     bool checkLaneId();
     void packComData(int lane_index);
 
     void dumpComData();
+    void test();
 
 private:
-    QList<QRect> rect_list_;
     QByteArray com_array_;
+    int curr_lane_index_;
     int curr_lane_id_;
     bool serial_status_;
 
     QTimer *send_msg_timer_;
     QTimer *timer_;
+
+    bool need_leave_;
+
+    QList<int> lane_id_list_;
 
 private:
     QLineEdit *port_lineedit_, *baud_rate_lineedit_, *data_bit_lineedit_, *stop_lineedit_, *parity_lineedit_;
