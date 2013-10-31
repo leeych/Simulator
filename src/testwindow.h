@@ -42,7 +42,10 @@ private:
     void initSignalSlots();
     bool checkLaneId();
     void packComData(int lane_index);
+    void initMyComSetting();
     QString formatComData(const QByteArray &array);
+
+    void enableComSetting(bool enable);
 
     void dumpComData();
     void test();

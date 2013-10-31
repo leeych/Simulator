@@ -55,8 +55,10 @@ void TestWindow::startSimulatorToggledSlot(bool checked)
         start_button_->setChecked(!checked);
         return;
     }
+    initMyComSetting();
     if (checked)
     {
+        enableComSetting(false);
         emit enableLaneIdCmbSignal(false);
         start_button_->setText(STRING_UI_STOP);
         int secs = timespan_spinbox_->value();
@@ -79,6 +81,7 @@ void TestWindow::startSimulatorToggledSlot(bool checked)
         start_button_->setText(STRING_UI_START);
         send_msg_timer_->stop();
         timer_->stop();
+        enableComSetting(true);
         emit enableLaneIdCmbSignal(true);
         road_branch_widget_->closeLightSlot();
     }
@@ -158,7 +161,6 @@ void TestWindow::initPage()
     QHBoxLayout *roadbranch_hlayout = new QHBoxLayout(roadbranch_grp);
     road_branch_widget_ = new RoadBranchWidget(this);
     roadbranch_hlayout->addWidget(road_branch_widget_);
-//    roadbranch_hlayout->setSizeConstraint(QLayout::SetFixedSize);
     roadbranch_grp->setLayout(roadbranch_hlayout);
 
     QLabel *timespan_label = new QLabel(STRING_UI_TIMESPAN + "(s):");
@@ -178,21 +180,41 @@ void TestWindow::initPage()
     stop_cmb_ = new QComboBox;
     parity_cmb_ = new QComboBox;
 
+    port_cmb_->setMinimumWidth(80);
+    baud_rate_cmb_->setMinimumWidth(80);
+    data_bit_cmb_->setMinimumWidth(80);
+    stop_cmb_->setMinimumWidth(80);
+    parity_cmb_->setMinimumWidth(80);
+
     port_cmb_->addItem("com1");
     port_cmb_->addItem("com2");
-/*
-    port_lineedit_->setText("com1");
-    baud_rate_lineedit_->setText("9600");
-    data_bit_lineedit_->setText("8");
-    stop_lineedit_->setText("1");
-    parity_lineedit_->setText("None");
 
-    port_lineedit_->setReadOnly(true);
-    baud_rate_lineedit_->setReadOnly(true);
-    data_bit_lineedit_->setReadOnly(true);
-    stop_lineedit_->setReadOnly(true);
-    parity_lineedit_->setReadOnly(true);
-*/
+    baud_rate_cmb_->addItem("4800");
+    baud_rate_cmb_->addItem("9600");
+    baud_rate_cmb_->addItem("14400");
+    baud_rate_cmb_->addItem("19200");
+    baud_rate_cmb_->addItem("38400");
+    baud_rate_cmb_->setCurrentIndex(1);
+
+    for (int i = 4; i < 9; i++)
+    {
+        data_bit_cmb_->addItem(QString::number(i));
+    }
+    int count = data_bit_cmb_->count();
+    data_bit_cmb_->setCurrentIndex(count-1);
+
+    stop_cmb_->addItem("1");
+    stop_cmb_->addItem("1.5");
+    stop_cmb_->addItem("2");
+    stop_cmb_->setCurrentIndex(0);
+
+    parity_cmb_->addItem("None");
+    parity_cmb_->addItem("Odd");
+    parity_cmb_->addItem("Even");
+    parity_cmb_->addItem("Mark");
+    parity_cmb_->addItem("Space");
+    parity_cmb_->setCurrentIndex(0);
+
     QGroupBox *illustrate_grp = new QGroupBox;
     QString dir = MUtility::getImagesDir();
     QLabel *green_label = new QLabel;
@@ -216,11 +238,11 @@ void TestWindow::initPage()
     glayout->addWidget(new QLabel(STRING_UI_STOPBIT + ":"), 3, 0, 1, 1, Qt::AlignCenter);
     glayout->addWidget(new QLabel(STRING_UI_PARITY + ":"), 4, 0, 1, 1, Qt::AlignCenter);
 
-    glayout->addWidget(port_lineedit_, 0, 1, 1, 1, Qt::AlignCenter);
-    glayout->addWidget(baud_rate_lineedit_, 1, 1, 1, 1, Qt::AlignCenter);
-    glayout->addWidget(data_bit_lineedit_, 2, 1, 1, 1, Qt::AlignCenter);
-    glayout->addWidget(stop_lineedit_, 3, 1, 1, 1, Qt::AlignCenter);
-    glayout->addWidget(parity_lineedit_, 4, 1, 1, 1, Qt::AlignCenter);
+    glayout->addWidget(port_cmb_, 0, 1, 1, 1, Qt::AlignCenter);
+    glayout->addWidget(baud_rate_cmb_, 1, 1, 1, 1, Qt::AlignCenter);
+    glayout->addWidget(data_bit_cmb_, 2, 1, 1, 1, Qt::AlignCenter);
+    glayout->addWidget(stop_cmb_, 3, 1, 1, 1, Qt::AlignCenter);
+    glayout->addWidget(parity_cmb_, 4, 1, 1, 1, Qt::AlignCenter);
     QGroupBox *param_grp = new QGroupBox;
     param_grp->setLayout(glayout);
 
@@ -321,6 +343,88 @@ void TestWindow::packComData(int lane_index)
              << "lane id:" << curr_lane_id_ << endl;
 }
 
+void TestWindow::initMyComSetting()
+{
+    QString port_name = port_cmb_->currentText();
+    QString baud_rate = baud_rate_cmb_->currentText();
+    if (baud_rate == "4800")
+    {
+        my_com_setting_.BaudRate = BAUD4800;
+    }
+    else if (baud_rate == "9600")
+    {
+        my_com_setting_.BaudRate = BAUD9600;
+    }
+    else if (baud_rate == "19200")
+    {
+        my_com_setting_.BaudRate = BAUD19200;
+    }
+    else if (baud_rate == "38400")
+    {
+        my_com_setting_.BaudRate = BAUD38400;
+    }
+
+    int data_bit = data_bit_cmb_->currentText().toInt();
+    if (data_bit == 5)
+    {
+        my_com_setting_.DataBits = DATA_5;
+    }
+    else if (data_bit == 6)
+    {
+        my_com_setting_.DataBits = DATA_6;
+    }
+    else if (data_bit == 7)
+    {
+        my_com_setting_.DataBits = DATA_7;
+    }
+    else if (data_bit == 8)
+    {
+        my_com_setting_.DataBits = DATA_8;
+    }
+
+    QString stop_bit = stop_cmb_->currentText();
+    if (stop_bit == "1")
+    {
+        my_com_setting_.StopBits = STOP_1;
+    }
+    else if (stop_bit == "1.5")
+    {
+        my_com_setting_.StopBits = STOP_1_5;
+    }
+    else if (stop_bit == "2")
+    {
+        my_com_setting_.StopBits = STOP_2;
+    }
+
+    QString parity_str = parity_cmb_->currentText();
+    if (parity_str == "None")
+    {
+        my_com_setting_.Parity = PAR_NONE;
+    }
+    else if (parity_str == "Odd")
+    {
+        my_com_setting_.Parity = PAR_ODD;
+    }
+    else if (parity_str == "Event")
+    {
+        my_com_setting_.Parity = PAR_EVEN;
+    }
+    else if (parity_str == "Mark")
+    {
+        my_com_setting_.Parity = PAR_MARK;
+    }
+    else if (parity_str == "Space")
+    {
+        my_com_setting_.Parity = PAR_SPACE;
+    }
+
+    my_com_->setPortName(port_name);
+    my_com_->setBaudRate(my_com_setting_.BaudRate);
+    my_com_->setDataBits(my_com_setting_.DataBits);
+    my_com_->setStopBits(my_com_setting_.StopBits);
+    my_com_->setParity(my_com_setting_.Parity);
+}
+
 QString TestWindow::formatComData(const QByteArray &array)
 {
     QString str;
@@ -334,6 +438,15 @@ QString TestWindow::formatComData(const QByteArray &array)
     }
 
     return str;
+}
+
+void TestWindow::enableComSetting(bool enable)
+{
+    port_cmb_->setEnabled(enable);
+    baud_rate_cmb_->setEnabled(enable);
+    data_bit_cmb_->setEnabled(enable);
+    stop_cmb_->setEnabled(enable);
+    parity_cmb_->setEnabled(enable);
 }
 
 void TestWindow::dumpComData()
