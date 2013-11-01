@@ -13,11 +13,13 @@
 #endif
 
 #if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-#define SET_HEADER_CLICKABLE(table_ptr,flag) \
-    table_ptr->horizontalHeader()->setClickable(flag);
+#define SET_HEADER_CLICKABLE(table_ptr,h,flag) \
+    if (#h == "horizontal") {table_ptr->horizontalHeader()->setClickable(flag);} \
+    else { table_ptr->verticalHeader()->setClickable(flag);}
 #else
-#define SET_HEADER_CLICKABLE(table_ptr,flag) \
-    table_ptr->horizontalHeader()->setSectionsClickable(flag);
+#define SET_HEADER_CLICKABLE(table_ptr,h,flag) \
+    if (#h == "horizontal"){table_ptr->horizontalHeader()->setSectionsClickable(flag);} \
+    else {table_ptr->verticalHeader()->setSectionsClickable(flag);}
 #endif
 
 

@@ -58,7 +58,8 @@ void DetectorIdEditWidget::initTable()
     detector_id_table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     detector_id_table_->setSelectionBehavior(QTableWidget::SelectRows);
     detector_id_table_->setSelectionMode(QAbstractItemView::SingleSelection);
-    SET_HEADER_CLICKABLE(detector_id_table_, false)
+    SET_HEADER_CLICKABLE(detector_id_table_, horizontal, false)
+    SET_HEADER_CLICKABLE(detector_id_table_, vertical, false)
 
     QPalette pal;
     pal.setColor(QPalette::Base, QColor(233, 246, 254));
@@ -90,6 +91,7 @@ void DetectorIdEditWidget::initTableHeader()
     detector_id_table_->verticalHeader()->setStyleSheet(qss);
     detector_id_table_->horizontalHeader()->setStyleSheet(qss);
 
-    SET_HEADER_CLICKABLE(detector_id_table_, false)
+    SET_HEADER_CLICKABLE(detector_id_table_, horizontal, false)
+    SET_HEADER_CLICKABLE(detector_id_table_, vertical, false)
 //    detector_id_table_->horizontalHeader()->setStretchLastSection(true);
 }
