@@ -10,7 +10,8 @@ SOURCES += \
     trafficsimulatordlg.cpp \
     roadbranchwidget.cpp \
     mutility.cpp \
-    serialdata.cpp
+    serialdata.cpp \
+    detectorideditwidget.cpp
 
 HEADERS += \
     qextserialport/win_qextserialport.h \
@@ -21,12 +22,14 @@ HEADERS += \
     trafficsimulatordlg.h \
     roadbranchwidget.h \
     mutility.h \
-    serialdata.h
+    serialdata.h \
+    detectorideditwidget.h \
+    utilmacros.h
 
 
 DESTDIR = ./
 
-TRANSLATIONS = $$PWD/../resource/language/simulator.ts
+TRANSLATIONS = $$PWD/../resource/languages/simulator.ts
 
 RC_FILE = ../resource/appicon.rc
 

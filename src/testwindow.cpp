@@ -2,6 +2,7 @@
 #include "macrostrings.h"
 #include "serialdata.h"
 #include "mutility.h"
+#include "detectorideditwidget.h"
 
 #include <QTextEdit>
 #include <QVBoxLayout>
@@ -12,8 +13,9 @@
 #include <QComboBox>
 #include <QGroupBox>
 #include <QSpinBox>
-#include <QMessageBox>
 #include <QLabel>
+#include <QLCDNumber>
+#include <QMessageBox>
 #include <QTime>
 #include <QDateTime>
 #include <QTimer>
@@ -25,6 +27,8 @@ TestWindow::TestWindow(QWidget *parent) :
     struct PortSettings my_com_setting_ = {BAUD9600, DATA_8, PAR_NONE, STOP_1, FLOW_OFF, 500};
     my_com_ = new Win_QextSerialPort("com1", my_com_setting_, QextSerialBase::EventDriven);
 
+    detector_edit_widget_ = new DetectorIdEditWidget(this);
+
     curr_lane_index_ = 0;
     curr_lane_id_ = 0;
     serial_status_ = false;
@@ -35,7 +39,7 @@ TestWindow::TestWindow(QWidget *parent) :
     setWindowTitle(STRING_UI_WINDOW_TITLE);
     initPage();
     initSignalSlots();
-    setFixedSize(824,606);
+    setFixedSize(824+170,606);
     start_button_->setEnabled(false);
 }
 
@@ -58,7 +62,6 @@ void TestWindow::startSimulatorToggledSlot(bool checked)
     initMyComSetting();
     if (checked)
     {
-        enableComSetting(false);
         emit enableLaneIdCmbSignal(false);
         start_button_->setText(STRING_UI_STOP);
         int secs = timespan_spinbox_->value();
@@ -69,7 +72,7 @@ void TestWindow::startSimulatorToggledSlot(bool checked)
         curr_lane_index_ = qrand() % 12;
         emit laneIndexSignal(curr_lane_index_, RoadBranchWidget::Green);
         packComData(curr_lane_index_);
-        int sz = my_com_->write(com_array_);
+        my_com_->write(com_array_);
         if (need_leave_)
         {
             timer_->start(qrand() % 1000 + 1000);
@@ -115,6 +118,7 @@ void TestWindow::openSerialTriggeredSlot(bool checked)
 {
     if (checked)
     {
+        enableComSetting(false);
         open_close_button_->setText(STRING_UI_CLOSE + STRING_UI_SERIALPORT);
         bool status = my_com_->open(QIODevice::ReadWrite);
         serial_status_ = status;
@@ -132,6 +136,7 @@ void TestWindow::openSerialTriggeredSlot(bool checked)
     }
     else
     {
+        enableComSetting(true);
         open_close_button_->setText(STRING_UI_OPEN + STRING_UI_SERIALPORT);
         if (start_button_->isChecked())
         {
@@ -141,6 +146,17 @@ void TestWindow::openSerialTriggeredSlot(bool checked)
         open_tip_label_->clear();
         start_button_->setEnabled(false);
     }
+}
+
+void TestWindow::detectorEditButtonClicked()
+{
+    detector_edit_widget_->setWindowModality(Qt::ApplicationModal);
+    detector_edit_widget_->show();
+}
+
+void TestWindow::connectButtonClicked()
+{
+
 }
 
 void TestWindow::closeEvent(QCloseEvent *)
@@ -157,12 +173,40 @@ void TestWindow::closeEvent(QCloseEvent *)
 
 void TestWindow::initPage()
 {
-    QGroupBox *roadbranch_grp = new QGroupBox;
-    QHBoxLayout *roadbranch_hlayout = new QHBoxLayout(roadbranch_grp);
-    road_branch_widget_ = new RoadBranchWidget(this);
-    roadbranch_hlayout->addWidget(road_branch_widget_);
-    roadbranch_grp->setLayout(roadbranch_hlayout);
+    initComSettingLayout();
+    initRoadbranchLayout();
+    initScheduleInfoLayout();
 
+    QHBoxLayout *hlayout = new QHBoxLayout;
+    hlayout->addWidget(com_setting_grp_, 0);
+    hlayout->addWidget(roadbranch_grp_, 1);
+    hlayout->addWidget(schedule_grp_, 0);
+    setLayout(hlayout);
+
+    QPalette pal;
+    pal.setColor(QPalette::Background, QColor(233, 246, 254));
+    setPalette(pal);
+    QString qss = "QLineEdit{background-color:rgb(233,246,254);}"
+            "QGroupBox{border:1px solid #70a1dc;}";
+    setStyleSheet(qss);
+}
+
+void TestWindow::initSignalSlots()
+{
+    connect(start_button_, SIGNAL(toggled(bool)), this, SLOT(startSimulatorToggledSlot(bool)));
+    connect(this, SIGNAL(laneIndexSignal(int, int)), road_branch_widget_, SLOT(laneIndexSlot(int, int)));
+//    connect(this, SIGNAL(closeLightSignal()), road_branch_widget_, SLOT(closeLightSlot()));
+    connect(this, SIGNAL(enableLaneIdCmbSignal(bool)), road_branch_widget_, SLOT(enableLaneIdCmbSlot(bool)));
+    connect(send_msg_timer_, SIGNAL(timeout()), this, SLOT(sendMsgTimerTimeOutSlot()));
+    connect(timer_, SIGNAL(timeout()), this, SLOT(timerTimeOutSlot()));
+    connect(open_close_button_, SIGNAL(toggled(bool)), this, SLOT(openSerialTriggeredSlot(bool)));
+
+    connect(detector_cfg_button_, SIGNAL(clicked()), this, SLOT(detectorEditButtonClicked()));
+    connect(conn_button_, SIGNAL(clicked()), this, SLOT(connectButtonClicked()));
+}
+
+void TestWindow::initComSettingLayout()
+{
     QLabel *timespan_label = new QLabel(STRING_UI_TIMESPAN + "(s):");
     timespan_spinbox_ = new QSpinBox;
     timespan_spinbox_->setValue(1);
@@ -263,39 +307,82 @@ void TestWindow::initPage()
     start_vlayout->addLayout(open_hlayout);
     start_grp->setLayout(start_vlayout);
 
-    QGroupBox *edit_grp = new QGroupBox;
-    QVBoxLayout *edit_vlayout = new QVBoxLayout(edit_grp);
+    com_setting_grp_ = new QGroupBox;
+    QVBoxLayout *edit_vlayout = new QVBoxLayout(com_setting_grp_);
     edit_vlayout->addWidget(illustrate_grp);
     edit_vlayout->addStretch();
     edit_vlayout->addWidget(param_grp);
     edit_vlayout->addStretch();
     edit_vlayout->addWidget(start_grp);
 
-    edit_grp->setLayout(edit_vlayout);
-
-    QHBoxLayout *hlayout = new QHBoxLayout;
-    hlayout->addWidget(roadbranch_grp, 1);
-    hlayout->addWidget(edit_grp, 0);
-    hlayout->setStretch(0, 3);
-    hlayout->setStretch(1, 1);
-    setLayout(hlayout);
-
-    QPalette pal;
-    pal.setColor(QPalette::Background, QColor(233, 246, 254));
-    setPalette(pal);
-    QString qss = "QLineEdit{background-color:rgb(233,246,254);}";
-    setStyleSheet(qss);
+    com_setting_grp_->setLayout(edit_vlayout);
 }
 
-void TestWindow::initSignalSlots()
+void TestWindow::initRoadbranchLayout()
 {
-    connect(start_button_, SIGNAL(toggled(bool)), this, SLOT(startSimulatorToggledSlot(bool)));
-    connect(this, SIGNAL(laneIndexSignal(int, int)), road_branch_widget_, SLOT(laneIndexSlot(int, int)));
-//    connect(this, SIGNAL(closeLightSignal()), road_branch_widget_, SLOT(closeLightSlot()));
-    connect(this, SIGNAL(enableLaneIdCmbSignal(bool)), road_branch_widget_, SLOT(enableLaneIdCmbSlot(bool)));
-    connect(send_msg_timer_, SIGNAL(timeout()), this, SLOT(sendMsgTimerTimeOutSlot()));
-    connect(timer_, SIGNAL(timeout()), this, SLOT(timerTimeOutSlot()));
-    connect(open_close_button_, SIGNAL(toggled(bool)), this, SLOT(openSerialTriggeredSlot(bool)));
+    roadbranch_grp_ = new QGroupBox;
+    QHBoxLayout *roadbranch_hlayout = new QHBoxLayout(roadbranch_grp_);
+    road_branch_widget_ = new RoadBranchWidget(this);
+    roadbranch_hlayout->addWidget(road_branch_widget_);
+    roadbranch_grp_->setLayout(roadbranch_hlayout);
+}
+
+void TestWindow::initScheduleInfoLayout()
+{
+    QGridLayout *glayout = new QGridLayout;
+    glayout->addWidget(new QLabel(STRING_UI_SCHEDULE_ID+":"), 0, 0, 1, 1);
+    glayout->addWidget(new QLabel(STRING_UI_EVENT_ID+":"), 1, 0, 1, 1);
+    glayout->addWidget(new QLabel(STRING_UI_START_END_TIME+":"), 2, 0, 1, 1);
+    glayout->addWidget(new QLabel(STRING_UI_CYCLE_TIME+":"), 3, 0, 1, 1);
+    glayout->addWidget(new QLabel(STRING_UI_CTRL_MODE+":"), 4, 0, 1, 1);
+    glayout->addWidget(new QLabel(STRING_UI_STAGE_ID+":"), 5, 0, 1, 1);
+    glayout->addWidget(new QLabel(STRING_UI_CURRENT_PHASE+":"), 6, 0, 1, 1);
+
+    sched_id_label_ = new QLabel;
+    event_id_label_ = new QLabel;
+    start_time_label_ = new QLabel;
+    cycle_time_label_ = new QLabel;
+    ctrl_mode_label_ = new QLabel;
+    stage_id_label_ = new QLabel;
+    curr_phase_id_label_ = new QLabel;
+
+    glayout->addWidget(sched_id_label_, 0, 1, 1, 1);
+    glayout->addWidget(event_id_label_, 1, 1, 1, 1);
+    glayout->addWidget(start_time_label_, 2, 1, 1, 1);
+    glayout->addWidget(cycle_time_label_, 3, 1, 1, 1);
+    glayout->addWidget(ctrl_mode_label_, 4, 1, 1, 1);
+    glayout->addWidget(stage_id_label_, 5, 1, 1, 1);
+    glayout->addWidget(curr_phase_id_label_, 6, 1, 1, 1);
+
+    signaler_time_label_ = new QLabel;
+    count_down_lcd_ = new QLCDNumber;
+    conn_button_ = new QPushButton(STRING_UI_CONNECT);
+    detector_cfg_button_ = new QPushButton(STRING_UI_DETECTOR_EDIT);
+    count_down_lcd_->setDigitCount(8);
+    count_down_lcd_->setMinimumSize(QSize(0,32));
+    count_down_lcd_->setFrameShape(QFrame::Box);
+    count_down_lcd_->setFrameShadow(QFrame::Sunken);
+    count_down_lcd_->setMouseTracking(Qt::ClickFocus);
+    count_down_lcd_->setMode(QLCDNumber::Dec);
+    count_down_lcd_->setSegmentStyle(QLCDNumber::Flat);
+    count_down_lcd_->setToolTip(STRING_UI_GYR_LIGHT);
+    count_down_lcd_->display("00-00-00");
+
+    QVBoxLayout *signaler_vlayout = new QVBoxLayout;
+    signaler_vlayout->addWidget(new QLabel(STRING_UI_PHASE_TIME + "(" + STRING_UI_GYR_LIGHT + "):"));
+    signaler_vlayout->addWidget(count_down_lcd_);
+    signaler_vlayout->addWidget(new QLabel(STRING_UI_SIGNALER_TIME + ":"));
+    signaler_vlayout->addWidget(signaler_time_label_);
+    signaler_vlayout->addWidget(detector_cfg_button_);
+    signaler_vlayout->addWidget(conn_button_);
+
+    QVBoxLayout *vlayout = new QVBoxLayout;
+    vlayout->addLayout(glayout);
+//    vlayout->addStretch();
+    vlayout->addLayout(signaler_vlayout);
+
+    schedule_grp_ = new QGroupBox;
+    schedule_grp_->setLayout(vlayout);
 }
 
 bool TestWindow::checkLaneId()
@@ -429,14 +516,13 @@ QString TestWindow::formatComData(const QByteArray &array)
 {
     QString str;
     QByteArray tmp = array.toHex();
-
     for (int i = 0; i < 6; i++)
     {
         str.append(tmp.left(2));
         str.append(" ");
         tmp.remove(0,2);
     }
-
+    str = str.toUpper();
     return str;
 }
 

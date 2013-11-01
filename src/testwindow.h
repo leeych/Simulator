@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QList>
+#include <QDateTime>
 #include "roadbranchwidget.h"
 #include "win_qextserialport.h"
 
@@ -13,8 +14,11 @@ class QLineEdit;
 class QComboBox;
 class QSpinBox;
 class QLabel;
-
+class QGroupBox;
+class QLCDNumber;
 class QTimer;
+
+class DetectorIdEditWidget;
 
 class TestWindow : public QWidget
 {
@@ -34,12 +38,19 @@ public slots:
     void timerTimeOutSlot();
     void openSerialTriggeredSlot(bool);
 
+    void detectorEditButtonClicked();
+    void connectButtonClicked();
+
 private:
     void closeEvent(QCloseEvent *);
 
 private:
     void initPage();
     void initSignalSlots();
+    void initComSettingLayout();
+    void initRoadbranchLayout();
+    void initScheduleInfoLayout();
+
     bool checkLaneId();
     void packComData(int lane_index);
     void initMyComSetting();
@@ -60,9 +71,7 @@ private:
 
     QTimer *send_msg_timer_;
     QTimer *timer_;
-
     bool need_leave_;
-
     QList<int> lane_id_list_;
 
 private:
@@ -74,6 +83,16 @@ private:
 
     Win_QextSerialPort *my_com_;
     RoadBranchWidget *road_branch_widget_;
+
+    QGroupBox *com_setting_grp_, *roadbranch_grp_, *schedule_grp_;
+
+    QLabel *sched_id_label_, *event_id_label_, *start_time_label_, *cycle_time_label_;
+    QLabel *ctrl_mode_label_, *stage_id_label_, *curr_phase_id_label_, *signaler_time_label_;
+    QLCDNumber *count_down_lcd_;
+    QPushButton *conn_button_;
+    QPushButton *detector_cfg_button_;
+
+    DetectorIdEditWidget *detector_edit_widget_;
 
 };
 

@@ -128,5 +128,65 @@
         <source>Red arrow indicates left</source>
         <translation>车辆离开</translation>
     </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="36"/>
+        <source>Schedule id</source>
+        <translation>调度计划号</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="37"/>
+        <source>Event id</source>
+        <translation>事件号</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="38"/>
+        <source>Start and end time</source>
+        <translation>起始时间</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="39"/>
+        <source>Cycle time</source>
+        <translation>周期时长</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="40"/>
+        <source>Ctrl mode</source>
+        <translation>控制方式</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="41"/>
+        <source>Stage id</source>
+        <translation>阶段号</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="42"/>
+        <source>Current phase</source>
+        <translation>当前相位</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="43"/>
+        <source>Phase time</source>
+        <translation>相位时间</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="44"/>
+        <source>Green-Yellow-Red</source>
+        <translation>绿灯-黄灯-红灯</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="45"/>
+        <source>Signaler time</source>
+        <translation>信号机时间</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="46"/>
+        <source>Connect</source>
+        <translation>连接</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="47"/>
+        <source>Disconnect</source>
+        <translation>断开</translation>
+    </message>
 </context>
 </TS>
