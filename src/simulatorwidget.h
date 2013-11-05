@@ -20,12 +20,12 @@ class QTimer;
 
 class DetectorIdEditWidget;
 
-class TestWindow : public QWidget
+class SimulatorWidget : public QWidget
 {
     Q_OBJECT
 public:
-    explicit TestWindow(QWidget *parent = 0);
-    ~TestWindow();
+    explicit SimulatorWidget(QWidget *parent = 0);
+    ~SimulatorWidget();
 
 signals:
     void laneIndexSignal(int index, int color);

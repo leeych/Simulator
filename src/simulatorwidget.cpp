@@ -1,4 +1,4 @@
-#include "testwindow.h"
+#include "simulatorwidget.h"
 #include "macrostrings.h"
 #include "serialdata.h"
 #include "mutility.h"
@@ -21,7 +21,7 @@
 #include <QTimer>
 #include <QDebug>
 
-TestWindow::TestWindow(QWidget *parent) :
+SimulatorWidget::SimulatorWidget(QWidget *parent) :
     QWidget(parent)
 {
     struct PortSettings my_com_setting_ = {BAUD9600, DATA_8, PAR_NONE, STOP_1, FLOW_OFF, 500};
@@ -43,7 +43,7 @@ TestWindow::TestWindow(QWidget *parent) :
     start_button_->setEnabled(false);
 }
 
-TestWindow::~TestWindow()
+SimulatorWidget::~SimulatorWidget()
 {
     if (timer_ != NULL)
     {
@@ -52,7 +52,7 @@ TestWindow::~TestWindow()
     }
 }
 
-void TestWindow::startSimulatorToggledSlot(bool checked)
+void SimulatorWidget::startSimulatorToggledSlot(bool checked)
 {
     if (!checkLaneId())
     {
@@ -90,7 +90,7 @@ void TestWindow::startSimulatorToggledSlot(bool checked)
     }
 }
 
-void TestWindow::sendMsgTimerTimeOutSlot()
+void SimulatorWidget::sendMsgTimerTimeOutSlot()
 {
     if (timer_->isActive())
     {
@@ -100,7 +100,7 @@ void TestWindow::sendMsgTimerTimeOutSlot()
     startSimulatorToggledSlot(true);
 }
 
-void TestWindow::timerTimeOutSlot()
+void SimulatorWidget::timerTimeOutSlot()
 {
     timer_->stop();
     com_array_[1] = 0x02 + '\0';
@@ -114,7 +114,7 @@ void TestWindow::timerTimeOutSlot()
     int sz = my_com_->write(com_array_);
 }
 
-void TestWindow::openSerialTriggeredSlot(bool checked)
+void SimulatorWidget::openSerialTriggeredSlot(bool checked)
 {
     if (checked)
     {
@@ -148,18 +148,18 @@ void TestWindow::openSerialTriggeredSlot(bool checked)
     }
 }
 
-void TestWindow::detectorEditButtonClicked()
+void SimulatorWidget::detectorEditButtonClicked()
 {
     detector_edit_widget_->setWindowModality(Qt::ApplicationModal);
     detector_edit_widget_->show();
 }
 
-void TestWindow::connectButtonClicked()
+void SimulatorWidget::connectButtonClicked()
 {
 
 }
 
-void TestWindow::closeEvent(QCloseEvent *)
+void SimulatorWidget::closeEvent(QCloseEvent *)
 {
     if (timer_->isActive())
     {
@@ -171,7 +171,7 @@ void TestWindow::closeEvent(QCloseEvent *)
     }
 }
 
-void TestWindow::initPage()
+void SimulatorWidget::initPage()
 {
     initComSettingLayout();
     initRoadbranchLayout();
@@ -191,7 +191,7 @@ void TestWindow::initPage()
     setStyleSheet(qss);
 }
 
-void TestWindow::initSignalSlots()
+void SimulatorWidget::initSignalSlots()
 {
     connect(start_button_, SIGNAL(toggled(bool)), this, SLOT(startSimulatorToggledSlot(bool)));
     connect(this, SIGNAL(laneIndexSignal(int, int)), road_branch_widget_, SLOT(laneIndexSlot(int, int)));
@@ -205,7 +205,7 @@ void TestWindow::initSignalSlots()
     connect(conn_button_, SIGNAL(clicked()), this, SLOT(connectButtonClicked()));
 }
 
-void TestWindow::initComSettingLayout()
+void SimulatorWidget::initComSettingLayout()
 {
     QLabel *timespan_label = new QLabel(STRING_UI_TIMESPAN + "(s):");
     timespan_spinbox_ = new QSpinBox;
@@ -318,7 +318,7 @@ void TestWindow::initComSettingLayout()
     com_setting_grp_->setLayout(edit_vlayout);
 }
 
-void TestWindow::initRoadbranchLayout()
+void SimulatorWidget::initRoadbranchLayout()
 {
     roadbranch_grp_ = new QGroupBox;
     QHBoxLayout *roadbranch_hlayout = new QHBoxLayout(roadbranch_grp_);
@@ -327,7 +327,7 @@ void TestWindow::initRoadbranchLayout()
     roadbranch_grp_->setLayout(roadbranch_hlayout);
 }
 
-void TestWindow::initScheduleInfoLayout()
+void SimulatorWidget::initScheduleInfoLayout()
 {
     QGridLayout *glayout = new QGridLayout;
     glayout->addWidget(new QLabel(STRING_UI_SCHEDULE_ID+":"), 0, 0, 1, 1);
@@ -385,7 +385,7 @@ void TestWindow::initScheduleInfoLayout()
     schedule_grp_->setLayout(vlayout);
 }
 
-bool TestWindow::checkLaneId()
+bool SimulatorWidget::checkLaneId()
 {
     QList<int> lane_id_list = road_branch_widget_->getLaneIdList();
     if (lane_id_list.contains(0))
@@ -396,7 +396,7 @@ bool TestWindow::checkLaneId()
     return true;
 }
 
-void TestWindow::packComData(int lane_index)
+void SimulatorWidget::packComData(int lane_index)
 {
     com_array_.clear();
     SerialData com_data;
@@ -430,7 +430,7 @@ void TestWindow::packComData(int lane_index)
              << "lane id:" << curr_lane_id_ << endl;
 }
 
-void TestWindow::initMyComSetting()
+void SimulatorWidget::initMyComSetting()
 {
     QString port_name = port_cmb_->currentText();
     QString baud_rate = baud_rate_cmb_->currentText();
@@ -512,7 +512,7 @@ void TestWindow::initMyComSetting()
     my_com_->setParity(my_com_setting_.Parity);
 }
 
-QString TestWindow::formatComData(const QByteArray &array)
+QString SimulatorWidget::formatComData(const QByteArray &array)
 {
     QString str;
     QByteArray tmp = array.toHex();
@@ -526,7 +526,7 @@ QString TestWindow::formatComData(const QByteArray &array)
     return str;
 }
 
-void TestWindow::enableComSetting(bool enable)
+void SimulatorWidget::enableComSetting(bool enable)
 {
     port_cmb_->setEnabled(enable);
     baud_rate_cmb_->setEnabled(enable);
@@ -535,7 +535,7 @@ void TestWindow::enableComSetting(bool enable)
     parity_cmb_->setEnabled(enable);
 }
 
-void TestWindow::dumpComData()
+void SimulatorWidget::dumpComData()
 {
     SerialData com_data;
 //    com_data.head = com_array_.at(0);
@@ -557,7 +557,7 @@ void TestWindow::dumpComData()
              << endl;
 }
 
-void TestWindow::test()
+void SimulatorWidget::test()
 {
 //    com_array_.clear();
 //    com_array_.append("F10101ed");

@@ -37,13 +37,11 @@ public slots:
     void enableLaneIdCmbSlot(bool enable);
 
 private:
-    void resizeEvent(QResizeEvent *);
-
-private:
     void initPage();
     void initSignalSlots();
-    void initLaneList();
+    void initLaneDetectorList();
     void initLightStatus();
+    void initSidewalkDetectorList();
 
     void updateFlashLight(int index, LightColor color);
 
@@ -57,6 +55,10 @@ private:
 
     QTimer *flash_timer_;
     int curr_index_;        // [1,12] origin index of the roadbranch in realtime monitor
+
+    QList<QRect> detector_rect_list_;
+    QList<QLabel *> detector_label_list_;
+    QList<QPixmap *> detector_pixmap_list_;
 
 };
 

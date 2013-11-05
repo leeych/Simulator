@@ -84,14 +84,10 @@ void RoadBranchWidget::enableLaneIdCmbSlot(bool enable)
     }
 }
 
-void RoadBranchWidget::resizeEvent(QResizeEvent *)
-{
-}
-
 void RoadBranchWidget::initPage()
 {
     QString dir = MUtility::getImagesDir();
-    dir += "bg.png";
+    dir += "simulator_bg.png";
     QPalette pal = this->palette();
     QPixmap pixmap(dir);
     this->resize(pixmap.size());
@@ -101,14 +97,16 @@ void RoadBranchWidget::initPage()
     setPalette(pal);
     setAutoFillBackground(true);
 
-    initLaneList();
+    initLaneDetectorList();
     initLightStatus();
 
     QString qss =
             "QComboBox{border-style:none;background-color:rgb(101,101,101); color:red; text-align:center;}"
             "QComboBox:hover{border:1px solid}"
             "QComboBox::drop-down{"
-            "border-style: none;background-color:rgb(101,101,101);width:1px;}";
+            "border-style: none;background-color:rgb(101,101,101);width:1px;}"
+            "QScrollBar::handle:horizontal,vertical{background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #eff6fc, stop:1 #caddec);"
+            "border: 1px solid #759cb9;min-width: 10px;}";
     setStyleSheet(qss);
 }
 
@@ -120,8 +118,11 @@ void RoadBranchWidget::initSignalSlots()
     }
     connect(flash_timer_, SIGNAL(timeout()), this, SLOT(flashTimerTimeoutSlot()));
 }
-
-void RoadBranchWidget::initLaneList()
+// 13-1: 127,174 13-2: 127,351
+// 14-1: 174,130 14-2: 341,130
+// 15-1: 393,175 15-2: 393,350
+// 16-1: 174,395 16-2: 339,396
+void RoadBranchWidget::initLaneDetectorList()
 {
     QStringList item_list;
     for (int i = 1; i <= 60; i++)
@@ -136,13 +137,42 @@ void RoadBranchWidget::initLaneList()
         lane_cmb_list_.append(cmb);
     }
 
-    cmb_rect_list_ << QRect(194, 504, 38, 26) << QRect(9,199,38,26) << QRect(317,20,38,26) << QRect(500,321,38,26)
-                      << QRect(235,504,38,26) << QRect(9,243,38,26) << QRect(275,20,38,26) << QRect(500,280,38,26)
-                      << QRect(151,504,38,26) << QRect(9,157,38,26) << QRect(357,20,38,26) << QRect(500,363,38,26);
+    cmb_rect_list_ << QRect(318,523,36,26) << QRect(0,319,36,26) << QRect(162,1,36,26) << QRect(514,197,36,26)
+                   << QRect(355,523,36,26) << QRect(0,355,36,26) << QRect(198,1,36,26) << QRect(514,161,36,26)
+                   << QRect(281,523,36,26) << QRect(0,283,36,26) << QRect(234,1,36,26) << QRect(514,234,36,26);
     for (int i = 0; i < 12; i++)
     {
         lane_cmb_list_.at(i)->setGeometry(cmb_rect_list_.at(i));
         lane_cmb_list_.at(i)->setCurrentIndex(i);
+    }
+
+    detector_rect_list_ << QRect(323,485,24,24) << QRect(37,320,24,24) << QRect(202,27,24,24) << QRect(485,200,24,24)
+                        << QRect(359,485,24,24) << QRect(37,356,24,24) << QRect(166,27,24,24) << QRect(485,163,24,24)
+                        << QRect(285,485,24,24) << QRect(37,285,24,24) << QRect(237,27,24,24) << QRect(485,234,24,24);
+    for (int i = 0; i < detector_rect_list_.size(); i++)
+    {
+        QLabel *label = new QLabel(this);
+        detector_label_list_.append(label);
+    }
+    QString dir = MUtility::getImagesDir();
+    for (int i = 0; i < 12; i++)
+    {
+        QPixmap *pixmap = new QPixmap(dir + "detector_green_img.png");
+        detector_pixmap_list_.append(pixmap);
+    }
+    for (int i = 12; i < 24; i++)
+    {
+        QPixmap *pixmap = new QPixmap(dir + "detector_red_img.png");
+        detector_pixmap_list_.append(pixmap);
+    }
+
+    for (int i = 0; i < 12; i++)
+    {
+        detector_label_list_.at(i)->setGeometry(detector_rect_list_.at(i));
+    }
+    for (int i = 0; i < 12; i++)
+    {
+        detector_label_list_.at(i)->setPixmap(*detector_pixmap_list_.at(i));
     }
 }
 

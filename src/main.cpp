@@ -3,8 +3,7 @@
 #include <QIcon>
 #include <QTranslator>
 
-#include "testwindow.h"
-#include "trafficsimulatordlg.h"
+#include "simulatorwidget.h"
 #include "roadbranchwidget.h"
 #include "mutility.h"
 
@@ -13,18 +12,21 @@
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-#if 0
+//#if 0
     QString dir = MUtility::getLanguageDir() + "simulator.qm";
     QTranslator translator;
     translator.load(dir);
     app.installTranslator(&translator);
-
-    TestWindow window;
+#if 1
+    SimulatorWidget window;
     dir = MUtility::getImagesDir() + "simulator.ico";
     window.setWindowIcon(QIcon(dir));
     window.show();
 #endif
+
+#if 0
     DetectorIdEditWidget widget;
     widget.show();
+#endif
     return app.exec();
 }

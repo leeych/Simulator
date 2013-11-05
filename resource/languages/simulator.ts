@@ -188,5 +188,40 @@
         <source>Disconnect</source>
         <translation>断开</translation>
     </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="48"/>
+        <source>Edit detector id</source>
+        <translation>检测器ID-编辑</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="49"/>
+        <source>Detector id edit window</source>
+        <translation>检测器ID编辑</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="51"/>
+        <source>East</source>
+        <translation>东</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="52"/>
+        <source>South</source>
+        <translation>南</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="53"/>
+        <source>West</source>
+        <translation>西</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="54"/>
+        <source>North</source>
+        <translation>北</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="57"/>
+        <source>Sidewalk</source>
+        <translation>人行道</translation>
+    </message>
 </context>
 </TS>
