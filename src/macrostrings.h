@@ -55,6 +55,6 @@
 
 //#define STRING_UI_LANE              QObject::tr("Lane")
 #define STRING_UI_SIDEWALK          QObject::tr("Sidewalk")
-
+#define STRING_UI_IP                QObject::tr("IP")
 
 #endif // MACROSTRINGS_H

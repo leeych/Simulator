@@ -3,9 +3,11 @@
 
 #include <QWidget>
 #include <QList>
+#include <QMap>
 #include <QDateTime>
 #include "roadbranchwidget.h"
 #include "win_qextserialport.h"
+#include "tscparam.h"
 
 class QTextEdit;
 class QTextBrowser;
@@ -17,8 +19,45 @@ class QLabel;
 class QGroupBox;
 class QLCDNumber;
 class QTimer;
-
 class DetectorIdEditWidget;
+class SyncCommand;
+
+
+typedef struct BeginMonitorTag
+{
+    unsigned char channel_id;
+    unsigned char status;
+}BeginMonitorInfo;
+
+typedef struct CountDownTag
+{
+    unsigned char ctrl_mode;
+    unsigned char stage_id;
+    unsigned char light_corlor;
+    unsigned char light_time;
+    unsigned int phase_ids;
+}CountDownInfo;
+
+typedef struct RedYellowGreenTag
+{
+    unsigned char red;
+    unsigned char yellow;
+    unsigned char green;
+
+    RedYellowGreenTag() :
+        red(0), yellow(0), green(0)
+    {}
+
+}RYGArray;
+
+typedef struct LightStatusTag
+{
+    RYGArray lights[4];
+    unsigned char work_mode;
+    unsigned char plan_id;
+    unsigned int phase_id;
+}LightStatusInfo;
+
 
 class SimulatorWidget : public QWidget
 {
@@ -26,6 +65,16 @@ class SimulatorWidget : public QWidget
 public:
     explicit SimulatorWidget(QWidget *parent = 0);
     ~SimulatorWidget();
+    void initialize();
+
+    enum LightColor
+    {
+        Red = 0,
+        Yellow,
+        Green,
+        Off,
+        Invalid
+    };
 
 signals:
     void laneIndexSignal(int index, int color);
@@ -41,8 +90,21 @@ public slots:
     void detectorEditButtonClicked();
     void connectButtonClicked();
 
-private:
+    void connectEstablishedSlot();
+    void disconnectedSlot();
+    void connectErrorSlot(const QString&);
+
+    void onCmdGetVerIdSlot(QByteArray &array);
+    void onCmdReadConfigFileSlot(QByteArray &array);
+    void onCmdParseParam(QByteArray &array);
+
+    void connTimerTimeoutSlot();
+    void signalerTimerTimeoutSlot();
+    void countDownTimerTimeoutSlot();
+
+protected:
     void closeEvent(QCloseEvent *);
+    void timerEvent(QTimerEvent *);
 
 private:
     void initPage();
@@ -51,13 +113,27 @@ private:
     void initRoadbranchLayout();
     void initScheduleInfoLayout();
 
+    void initCtrlModeDesc();
+    bool initTscParam();
+
+    void updateScheduleInfo();
+
     bool checkLaneId();
     void packComData(int lane_index);
     void initMyComSetting();
     QString formatComData(const QByteArray &array);
-
     void enableComSetting(bool enable);
 
+    bool checkPackage(QByteArray &array);
+
+    bool parseConfigContent(QByteArray &array);
+    bool parseBeginMonitorContent(QByteArray &array);
+    bool parseLightStatusContent(QByteArray &array);
+    bool parseCountDownContent(QByteArray &array);
+    bool parseTSCTimeContent(QByteArray &array);
+    bool parseAllLightOnContent(QByteArray &array);
+
+    QString phaseBitsDesc(unsigned int phase_ids);
     void dumpComData();
     void test();
 
@@ -73,6 +149,45 @@ private:
     QTimer *timer_;
     bool need_leave_;
     QList<int> lane_id_list_;
+
+    QString ip_;
+    int port_;
+    QString cfg_file_;
+    bool conn_status_;
+    int ver_check_id_;  // version check timer id
+    bool is_inited_;    // tsc time update flag
+
+    SyncCommand *sync_cmd_;
+    TSCParam tsc_param_;
+    QByteArray recv_array_;
+    QByteArray cfg_array_;
+
+    QTimer *conn_timer_;
+    QTimer *signaler_timer_, *count_down_timer_;
+    QDateTime date_time_;
+
+    unsigned char curr_stage_id_;
+    unsigned char total_stage_count_;
+    unsigned char count_down_secs_;
+    unsigned char count_down_light_;
+
+    unsigned char sec_count_;
+
+    BeginMonitorInfo begin_monitor_info_;
+    CountDownInfo count_down_info_;
+    LightStatusInfo light_status_info_;
+    typedef struct ChannelStatusInfoTag
+    {
+        QVector<LightColor> channel_vec;
+        unsigned char work_mode;
+        unsigned char stage_id;
+        unsigned int phase_id;
+    }ChannelStatusInfo;
+
+    ChannelStatusInfo channel_status_info_;
+    ChannelStatusInfo channel_status_bak_;  // used for revert lights' status
+
+    QMap<unsigned char, QString> ctrl_mode_desc_map_;
 
 private:
     QComboBox *port_cmb_, *baud_rate_cmb_, *data_bit_cmb_, *stop_cmb_, *parity_cmb_;
@@ -92,7 +207,9 @@ private:
     QPushButton *conn_button_;
     QPushButton *detector_cfg_button_;
 
-    DetectorIdEditWidget *detector_edit_widget_;
+    DetectorIdEditWidget *detector_edit_dlg_;
+    QLineEdit *ip_lineedit_, *port_lineedit_;
+    QLabel *conn_tip_label_;
 
 };
 

@@ -46,6 +46,13 @@ QString MUtility::getHelpDir()
     return dir;
 }
 
+QString MUtility::getTempDir()
+{
+    QString dir = getMainDir();
+    dir += "temp/";
+    return dir;
+}
+
 QString MUtility::fetchStyleSheet(const QString &file_path)
 {
     QString str;

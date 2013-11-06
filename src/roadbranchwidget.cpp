@@ -19,15 +19,18 @@ RoadBranchWidget::RoadBranchWidget(QWidget *parent) :
     curr_index_ = 0;
     initPage();
     initSignalSlots();
+    closeLightSlot();
     setFixedSize(550,550);
 }
 
 RoadBranchWidget::~RoadBranchWidget()
 {
     qDeleteAll(pixmap_list_);
+    qDeleteAll(detector_pixmap_list_);
+    qDeleteAll(sidewalk_pixmap_list_);
 }
 
-void RoadBranchWidget::cmbItemSelectedSlot(int)
+void RoadBranchWidget::laneDetectorcmbItemSelectedSlot(int)
 {
     QComboBox *cmb = qobject_cast<QComboBox *>(sender());
     if (cmb == NULL || cmb->currentText() == "-")
@@ -57,15 +60,45 @@ void RoadBranchWidget::cmbItemSelectedSlot(int)
     emit laneIndexSignal(lane_index+1);
 }
 
+void RoadBranchWidget::sidewalkcmbItemSelectedSlot(int)
+{
+    QComboBox *cmb = qobject_cast<QComboBox *>(sender());
+    if (cmb == NULL || cmb->currentText() == "-")
+    {
+        return;
+    }
+    QList<int> sidewalk_id_list;
+    int sidewalk_idx = -1;
+    for (int i = 0; i < sidewalk_cmb_list_.size(); i++)
+    {
+        if (cmb != sidewalk_cmb_list_.at(i))
+        {
+            sidewalk_id_list.append(sidewalk_cmb_list_.at(i)->currentText().toInt());
+        }
+        else
+        {
+            sidewalk_idx = i;
+        }
+    }
+    if (sidewalk_id_list.contains(cmb->currentText().toInt()))
+    {
+        QMessageBox::information(this, STRING_TIP, STRING_UI_ASSIGNED + STRING_UI_OTHER + STRING_UI_SIDEWALK, STRING_OK);
+        int count = cmb->count();
+        cmb->setCurrentIndex(count-1);
+        return;
+    }
+//    emit laneIndexSignal();
+}
+
 void RoadBranchWidget::flashTimerTimeoutSlot()
 {
-    updateFlashLight(curr_index_, Red);
+    updateLaneLight(curr_index_, Red);
 }
 
 void RoadBranchWidget::laneIndexSlot(int index, int color)
 {
     curr_index_ = index;
-    updateFlashLight(curr_index_, LightColor(color));
+    updateLaneLight(curr_index_, LightColor(color));
 }
 
 void RoadBranchWidget::closeLightSlot()
@@ -74,6 +107,9 @@ void RoadBranchWidget::closeLightSlot()
     {
         lane_light_list_.at(i)->hide();
     }
+    foreach (QLabel *label, sidewalk_light_label_list_) {
+        label->hide();
+    }
 }
 
 void RoadBranchWidget::enableLaneIdCmbSlot(bool enable)
@@ -81,6 +117,18 @@ void RoadBranchWidget::enableLaneIdCmbSlot(bool enable)
     for (int i = 0; i < lane_cmb_list_.size(); i++)
     {
         lane_cmb_list_.at(i)->setEnabled(enable);
+    }
+}
+
+void RoadBranchWidget::showDetectorSlot(int id, int color, bool show)
+{
+    if (id > 12)
+    {
+        showSidewalkDetector((SidewalkId)id, show);
+    }
+    else
+    {
+        showLaneDetector(id, (LightColor)color, show);
     }
 }
 
@@ -99,6 +147,7 @@ void RoadBranchWidget::initPage()
 
     initLaneDetectorList();
     initLightStatus();
+    initSidewalkDetectorList();
 
     QString qss =
             "QComboBox{border-style:none;background-color:rgb(101,101,101); color:red; text-align:center;}"
@@ -114,21 +163,28 @@ void RoadBranchWidget::initSignalSlots()
 {
     for (int i = 0; i < lane_cmb_list_.size(); i++)
     {
-        connect(lane_cmb_list_.at(i), SIGNAL(activated(int)), this, SLOT(cmbItemSelectedSlot(int)));
+        connect(lane_cmb_list_.at(i), SIGNAL(activated(int)), this, SLOT(laneDetectorcmbItemSelectedSlot(int)));
+    }
+    foreach (QComboBox *cmb, sidewalk_cmb_list_) {
+        connect(cmb, SIGNAL(activated(int)), this, SLOT(sidewalkcmbItemSelectedSlot(int)));
     }
     connect(flash_timer_, SIGNAL(timeout()), this, SLOT(flashTimerTimeoutSlot()));
 }
 // 13-1: 127,174 13-2: 127,351
-// 14-1: 174,130 14-2: 341,130
+// 14-1: 174,130 14-2: 346,130
 // 15-1: 393,175 15-2: 393,350
-// 16-1: 174,395 16-2: 339,396
+// 16-1: 174,395 16-2: 344,396
 void RoadBranchWidget::initLaneDetectorList()
 {
     QStringList item_list;
-    for (int i = 1; i <= 60; i++)
+    for (int i = 1; i <= 48; i++)
     {
         item_list.append(QString::number(i));
     }
+    item_list.append(QString::number(57));
+    item_list.append(QString::number(58));
+    item_list.append(QString::number(59));
+    item_list.append(QString::number(60));
     item_list.append("-");
     for (int i = 0; i < 12; i++)
     {
@@ -146,42 +202,33 @@ void RoadBranchWidget::initLaneDetectorList()
         lane_cmb_list_.at(i)->setCurrentIndex(i);
     }
 
-    detector_rect_list_ << QRect(323,485,24,24) << QRect(37,320,24,24) << QRect(202,27,24,24) << QRect(485,200,24,24)
-                        << QRect(359,485,24,24) << QRect(37,356,24,24) << QRect(166,27,24,24) << QRect(485,163,24,24)
-                        << QRect(285,485,24,24) << QRect(37,285,24,24) << QRect(237,27,24,24) << QRect(485,234,24,24);
-    for (int i = 0; i < detector_rect_list_.size(); i++)
+    detector_rect_list_ << QRect(323,485,24,24) << QRect(37,320,24,24) << QRect(202,33,24,24) << QRect(485,200,24,24)
+                        << QRect(359,485,24,24) << QRect(37,356,24,24) << QRect(166,33,24,24) << QRect(485,163,24,24)
+                        << QRect(285,485,24,24) << QRect(37,285,24,24) << QRect(237,33,24,24) << QRect(485,234,24,24);
+    for (int i = 0; i < detector_rect_list_.size()*2; i++)
     {
         QLabel *label = new QLabel(this);
+        label->hide();
         detector_label_list_.append(label);
     }
     QString dir = MUtility::getImagesDir();
     for (int i = 0; i < 12; i++)
     {
-        QPixmap *pixmap = new QPixmap(dir + "detector_green_img.png");
-        detector_pixmap_list_.append(pixmap);
+        detector_label_list_.at(i)->setGeometry(detector_rect_list_.at(i));
+        detector_label_list_.at(i)->setPixmap(QPixmap(dir + "detector_green_img.png"));
     }
     for (int i = 12; i < 24; i++)
     {
-        QPixmap *pixmap = new QPixmap(dir + "detector_red_img.png");
-        detector_pixmap_list_.append(pixmap);
-    }
-
-    for (int i = 0; i < 12; i++)
-    {
-        detector_label_list_.at(i)->setGeometry(detector_rect_list_.at(i));
-    }
-    for (int i = 0; i < 12; i++)
-    {
-        detector_label_list_.at(i)->setPixmap(*detector_pixmap_list_.at(i));
+        detector_label_list_.at(i)->setGeometry(detector_rect_list_.at(i-12));
+        detector_label_list_.at(i)->setPixmap(QPixmap(dir + "detector_red_img.png"));
     }
 }
 
 void RoadBranchWidget::initLightStatus()
 {
-
-    light_rect_list_ << QRect(193,460,38,38) << QRect(52,195,38,38) << QRect(316,53,38,38) << QRect(459,318,38,38)
-                     << QRect(234,460,38,38) << QRect(52,236,38,38) << QRect(276,53,38,38) << QRect(459,278,38,38)
-                     << QRect(153,460,38,38) << QRect(52,155,38,38) << QRect(357,53,38,38) << QRect(459,359,38,38);
+    light_rect_list_ << QRect(200,433,36,32) << QRect(84,200,32,36) << QRect(315,85,36,32) << QRect(432,313,32,36)
+                     << QRect(238,433,36,32) << QRect(84,238,32,36) << QRect(277,85,36,32) << QRect(432,275,32,36)
+                     << QRect(162,433,36,32) << QRect(84,162,32,36) << QRect(353,85,36,32) << QRect(432,351,32,36);
 
     for (int i = 0; i < 12; i++)
     {
@@ -197,45 +244,210 @@ void RoadBranchWidget::initLightStatus()
         label->hide();
         lane_light_list_.append(label);
     }
+    for (int i = 0; i < 12; i++)
+    {
+        QLabel *label = new QLabel(this);
+        label->setGeometry(light_rect_list_.at(i));
+        label->hide();
+        lane_light_list_.append(label);
+    }
 
     QString dir = MUtility::getImagesDir();
-    pixmap_list_ << new QPixmap(dir + "dg_img.bmp") << new QPixmap(dir + "lg_img.bmp") << new QPixmap(dir + "tg_img.bmp") << new QPixmap(dir + "rg_img.bmp")
-                 << new QPixmap(dir + "rg_img.bmp") << new QPixmap(dir + "dg_img.bmp") << new QPixmap(dir + "lg_img.bmp") << new QPixmap(dir + "tg_img.bmp")
-                 << new QPixmap(dir + "lg_img.bmp") << new QPixmap(dir + "tg_img.bmp") << new QPixmap(dir + "rg_img.bmp") << new QPixmap(dir + "dg_img.bmp")
-                 << new QPixmap(dir + "dr_img.bmp") << new QPixmap(dir + "lr_img.bmp") << new QPixmap(dir + "tr_img.bmp") << new QPixmap(dir + "rr_img.bmp")
-                 << new QPixmap(dir + "rr_img.bmp") << new QPixmap(dir + "dr_img.bmp") << new QPixmap(dir + "lr_img.bmp") << new QPixmap(dir + "tr_img.bmp")
-                 << new QPixmap(dir + "lr_img.bmp") << new QPixmap(dir + "tr_img.bmp") << new QPixmap(dir + "rr_img.bmp") << new QPixmap(dir + "dr_img.bmp");
+    pixmap_list_ << new QPixmap(dir + "g_1.bmp") << new QPixmap(dir + "g_2.bmp") << new QPixmap(dir + "g_3.bmp") << new QPixmap(dir + "g_4.bmp")
+                 << new QPixmap(dir + "g_4.bmp") << new QPixmap(dir + "g_1.bmp") << new QPixmap(dir + "g_2.bmp") << new QPixmap(dir + "g_3.bmp")
+                 << new QPixmap(dir + "g_2.bmp") << new QPixmap(dir + "g_3.bmp") << new QPixmap(dir + "g_4.bmp") << new QPixmap(dir + "g_1.bmp")
+                 << new QPixmap(dir + "r_1.bmp") << new QPixmap(dir + "r_2.bmp") << new QPixmap(dir + "r_3.bmp") << new QPixmap(dir + "r_4.bmp")
+                 << new QPixmap(dir + "r_4.bmp") << new QPixmap(dir + "r_1.bmp") << new QPixmap(dir + "r_2.bmp") << new QPixmap(dir + "r_3.bmp")
+                 << new QPixmap(dir + "r_2.bmp") << new QPixmap(dir + "r_3.bmp") << new QPixmap(dir + "r_4.bmp") << new QPixmap(dir + "r_1.bmp")
+                 << new QPixmap(dir + "y_1.bmp") << new QPixmap(dir + "y_2.bmp") << new QPixmap(dir + "y_3.bmp") << new QPixmap(dir + "y_4.bmp")
+                 << new QPixmap(dir + "y_4.bmp") << new QPixmap(dir + "y_1.bmp") << new QPixmap(dir + "y_2.bmp") << new QPixmap(dir + "y_3.bmp")
+                 << new QPixmap(dir + "y_2.bmp") << new QPixmap(dir + "y_3.bmp") << new QPixmap(dir + "y_4.bmp") << new QPixmap(dir + "y_1.bmp");
     for (int i = 0; i < 12; i++)
     {
         lane_light_list_.at(i)->setPixmap(*pixmap_list_.at(i));
         lane_light_list_.at(i+12)->setPixmap(*pixmap_list_.at(i+12));
+        lane_light_list_.at(i+12*2)->setPixmap(*pixmap_list_.at(i+12*2));
     }
+}
+
+void RoadBranchWidget::initSidewalkDetectorList()
+{
+    for (int i = 0; i < 8; i++)
+    {
+        QLabel *label = new QLabel(this);
+        label->hide();
+        sidewalk_label_list_.append(label);
+    }
+    sidewalk_rect_list_ << QRect(127,174,24,24) << QRect(174,130,24,24) << QRect(393,175,24,24) << QRect(174,395,24,24)
+                        << QRect(127,351,24,24) << QRect(350,130,24,24) << QRect(393,350,24,24) << QRect(350,395,24,24);
+    QString dir = MUtility::getImagesDir();
+    sidewalk_pixmap_list_ << new QPixmap(dir + "detector_green_img.png");// << new QPixmap(dir + "detector_red_img.png");
+
+    for (int i = 0; i < 8; i++)
+    {
+        sidewalk_label_list_.at(i)->setGeometry(sidewalk_rect_list_.at(i));
+    }
+    for (int i = 0; i < 8; i++)
+    {
+        sidewalk_label_list_.at(i)->setPixmap(*sidewalk_pixmap_list_.at(0));
+    }
+
+    sidewalk_cmb_rect_list_ << QRect(154,178,36,22) << QRect(174,156,36,22) << QRect(358,178,36,22) << QRect(174,374,36,22)
+                            << QRect(154,351,36,22) << QRect(350,156,36,22) << QRect(358,351,36,22) << QRect(345,374,36,22);
+
+    for (int i = 0; i < 8; i++)
+    {
+        QComboBox *cmb = new QComboBox(this);
+        for (int j = 49; j < 57; j++ )
+        {
+            cmb->addItem(QString::number(j));
+        }
+        cmb->addItem("-");
+        cmb->setGeometry(sidewalk_cmb_rect_list_.at(i));
+        cmb->setCurrentIndex(i);
+        sidewalk_cmb_list_.append(cmb);
+    }
+
+    sidewalk_light_rect_list_ << QRect(133,148,18,18) << QRect(148,132,18,18) << QRect(397,149,18,18) << QRect(147,400,18,18)
+                              << QRect(133,383,18,18) << QRect(383,132,18,18) << QRect(397,384,18,18) << QRect(382,400,18,18);
+    for (int i = 0; i < 8; i++)
+    {
+        QLabel *label = new QLabel(this);
+        label->hide();
+        label->setGeometry(sidewalk_light_rect_list_.at(i));
+        sidewalk_light_label_list_.append(label);
+    }
+    for (int i = 0; i < 8; i++)
+    {
+        QLabel *label = new QLabel(this);
+        label->hide();
+        label->setGeometry(sidewalk_light_rect_list_.at(i));
+        sidewalk_light_label_list_.append(label);
+    }
+    for (int i = 0; i < 8; i++)
+    {
+        sidewalk_light_label_list_.at(i)->setPixmap(QPixmap(dir + "circle_g_img.bmp"));
+        sidewalk_light_label_list_.at(i+8)->setPixmap(QPixmap(dir + "circle_r_img.bmp"));
+    }
+}
+
+void RoadBranchWidget::initLightList()
+{
+
 }
 
 QList<int>& RoadBranchWidget::getLaneIdList()
 {
-    lane_id_list_.clear();
+    lane_detector_id_list_.clear();
     for (int i = 0; i < lane_cmb_list_.size(); i++)
     {
         int id = lane_cmb_list_.at(i)->currentText().toInt();
-        lane_id_list_.append(id);
+        lane_detector_id_list_.append(id);
     }
-    return lane_id_list_;
+    return lane_detector_id_list_;
 }
 
-void RoadBranchWidget::updateFlashLight(int index, LightColor color)
+void RoadBranchWidget::updateLaneLight(int id, LightColor color)
 {
-    if (index < 0 || index >= 12)
+    if (id <= 0)
     {
         return;
     }
-    for (int i = 0; i < 24; i++)
+    int index = id;
+    if (id <= 12)
     {
-        lane_light_list_.at(i)->hide();
+        switch(color)
+        {
+        case Green:
+            lane_light_list_.at(index)->show();
+            break;
+        case Red:
+            lane_light_list_.at(index+12)->show();
+            break;
+        case Yellow:
+            lane_light_list_.at(index+12*2)->show();
+            break;
+        case Off:
+            lane_light_list_.at(index)->hide();
+            lane_light_list_.at(index+12)->hide();
+            lane_light_list_.at(index+12*2)->hide();
+            break;
+        default:
+            break;
+        }
     }
-    if (color == Red)
+    else if (id <= 16)
     {
-        index += 12;
+        index = id-13;
+        switch (color)
+        {
+        case Green:
+            sidewalk_light_label_list_.at(index)->show();
+            sidewalk_light_label_list_.at(index+4)->show();
+            break;
+        case Red:
+            sidewalk_light_label_list_.at(index+8)->show();
+            sidewalk_light_label_list_.at(index+8+4)->show();
+            break;
+        case Yellow:
+            break;
+        case Off:
+            sidewalk_light_label_list_.at(index)->hide();
+            sidewalk_light_label_list_.at(index+4)->hide();
+            sidewalk_light_label_list_.at(index+8)->hide();
+            sidewalk_light_label_list_.at(index+8+4)->hide();
+            break;
+        default:
+            break;
+        }
     }
-    lane_light_list_.at(index)->show();
+}
+
+void RoadBranchWidget::showLaneDetector(int id, RoadBranchWidget::LightColor color, bool show)
+{
+    if (id <= 0 || id > 12)
+    {
+        return;
+    }
+    int index = id;
+    index--;
+    switch (color)
+    {
+    case Green:
+        detector_label_list_.at(index)->setVisible(show);
+        break;
+    case Red:
+        detector_label_list_.at(index+12)->setVisible(show);
+        break;
+    case Yellow:
+        break;
+    case Off:
+        detector_label_list_.at(index)->setVisible(show);
+        detector_label_list_.at(index+12)->setVisible(show);
+        break;
+    default:
+        detector_label_list_.at(index)->setVisible(show);
+        detector_label_list_.at(index+12)->setVisible(show);
+        break;
+    }
+
+}
+
+void RoadBranchWidget::showSidewalkDetector(SidewalkId sidewalk_id, bool show)
+{
+    int index = sidewalk_id-13;
+    switch (sidewalk_id)
+    {
+    case SId_13:
+    case SId_14:
+    case SId_15:
+    case SId_16:
+    {
+        sidewalk_label_list_.at(index)->setVisible(show);
+        sidewalk_label_list_.at(index+4)->setVisible(show);
+    }
+        break;
+    default:
+        break;
+    }
 }

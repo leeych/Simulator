@@ -1,4 +1,5 @@
 QT += widgets
+QT += network xml
 
 INCLUDEPATH += ./qextserialport
 SOURCES += \
@@ -11,7 +12,21 @@ SOURCES += \
     serialdata.cpp \
     detectorideditwidget.cpp \
     detectoriddelegate.cpp \
-    simulatorwidget.cpp
+    simulatorwidget.cpp \
+    synccommand.cpp \
+    command.cpp \
+    xmlhelper.cpp \
+    tscparam.cpp \
+    filereaderwriter.cpp \
+    mdatabase.cpp \
+    timingparam.cpp \
+    timesection.cpp \
+    signalerparam.cpp \
+    phasetiming.cpp \
+    phaseparam.cpp \
+    phaseconflictparam.cpp \
+    detectorparam.cpp \
+    channelparam.cpp
 
 HEADERS += \
     qextserialport/win_qextserialport.h \
@@ -24,7 +39,23 @@ HEADERS += \
     detectorideditwidget.h \
     utilmacros.h \
     detectoriddelegate.h \
-    simulatorwidget.h
+    simulatorwidget.h \
+    synccommand.h \
+    command.h \
+    xmlhelper.h \
+    tscparam.h \
+    tsc.h \
+    filereaderwriter.h \
+    mdatabase.h \
+    timingparam.h \
+    timesection.h \
+    signalerparam.h \
+    scheduleparam.h \
+    phasetiming.h \
+    phaseparam.h \
+    phaseconflictparam.h \
+    detectorparam.h \
+    channelparam.h
 
 
 DESTDIR = ./

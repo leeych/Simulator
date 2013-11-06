@@ -21,7 +21,8 @@ int main(int argc, char *argv[])
     SimulatorWidget window;
     dir = MUtility::getImagesDir() + "simulator.ico";
     window.setWindowIcon(QIcon(dir));
-    window.show();
+    window.initialize();
+//    window.show();
 #endif
 
 #if 0

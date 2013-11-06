@@ -12,6 +12,7 @@ public:
     static QString getMainDir();
     static QString getConfigDir();
     static QString getHelpDir();
+    static QString getTempDir();
     static QString fetchStyleSheet(const QString &file_path);
 
     static bool checkIPString(const QString &ip);
