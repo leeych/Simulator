@@ -26,7 +26,9 @@ SOURCES += \
     phaseparam.cpp \
     phaseconflictparam.cpp \
     detectorparam.cpp \
-    channelparam.cpp
+    channelparam.cpp \
+    scheduleparam.cpp \
+    testdlg.cpp
 
 HEADERS += \
     qextserialport/win_qextserialport.h \
@@ -55,7 +57,8 @@ HEADERS += \
     phaseparam.h \
     phaseconflictparam.h \
     detectorparam.h \
-    channelparam.h
+    channelparam.h \
+    testdlg.h
 
 
 DESTDIR = ./

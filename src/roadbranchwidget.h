@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QList>
+#include <QMap>
 #include <QRect>
 
 class QLineEdit;
@@ -18,7 +19,11 @@ class RoadBranchWidget : public QWidget
 public:
     explicit RoadBranchWidget(QWidget *parent = 0);
     ~RoadBranchWidget();
-    QList<int> &getLaneIdList();
+    QList<int> &getLaneDetectorIdList();
+    QList<int> &getSidewalkDetectorIdList();
+    QMap<int,int> &getLaneDetectorIdIndexMap();
+    QMap<int,int> &getSidewalkDetectorIdIndexMap();
+//    QMap<int,int> getLightIdIndexMap();
 
     enum LightColor
     {
@@ -60,7 +65,7 @@ private:
     void updateLaneLight(int id, LightColor color);
 
     void showLaneDetector(int id, LightColor color, bool show);
-    void showSidewalkDetector(SidewalkId sidewalk_id, bool show);
+    void showSidewalkDetector(int index, bool show);
 
 private:
     QList<QRect> light_rect_list_;
@@ -86,6 +91,13 @@ private:
     QList<QRect> sidewalk_rect_list_;
     QList<QComboBox *> sidewalk_cmb_list_;
     QList<QRect> sidewalk_cmb_rect_list_;
+
+    QList<int> sidewalk_detector_id_list_;
+
+    // QMap<int id, int index>
+    QMap<int, int> light_map_;
+    QMap<int, int> lane_detector_map_;
+    QMap<int, int> sidewalk_detector_map_;
 
 };
 

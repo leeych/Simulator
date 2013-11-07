@@ -7,7 +7,7 @@
 #include "synccommand.h"
 #include "filereaderwriter.h"
 
-#include "macrostring.h"
+#include "testdlg.h"
 
 #include <QTextEdit>
 #include <QVBoxLayout>
@@ -29,12 +29,14 @@
 #define CONN_WAIT_MS    3000
 #define VERSION_CHECK_MS    5000
 
+#define SIGNALER_TIME_UPDATE(str) \
+    signaler_time_label_->setText("<font size=5>" + str + "</font>");
+
 SimulatorWidget::SimulatorWidget(QWidget *parent) :
     QWidget(parent)
 {
     struct PortSettings my_com_setting_ = {BAUD9600, DATA_8, PAR_NONE, STOP_1, FLOW_OFF, 500};
     my_com_ = new Win_QextSerialPort("com1", my_com_setting_, QextSerialBase::EventDriven);
-
     detector_edit_dlg_ = new DetectorIdEditWidget(this);
 
     curr_lane_index_ = 0;
@@ -49,10 +51,20 @@ SimulatorWidget::SimulatorWidget(QWidget *parent) :
     conn_status_ = false;
     ver_check_id_ = 0;
     is_inited_ = false;
+    ui_timer_id_ = 0;
+    is_uitimer_started_ = false;
+
+    curr_stage_id_ = 0;
+    total_stage_count_ = 0;
+    count_down_secs_ = 0;
+    count_down_light_ = 4;
 
     conn_timer_ = new QTimer(this);
     count_down_timer_ = new QTimer(this);
     signaler_timer_ = new QTimer(this);
+    sec_count_ = 0;
+
+    test_dlg_ = new TestDlg(this);
 
     setWindowTitle(STRING_UI_WINDOW_TITLE);
     initPage();
@@ -89,6 +101,8 @@ void SimulatorWidget::initialize()
     port_ = helper->ParseXmlNodeContent("port").toInt();
     ip_lineedit_->setText(ip_);
     port_lineedit_->setText(QString::number(port_));
+    QString str = date_time_.toString("yyyy-MM-dd hh:mm:ss");
+    SIGNALER_TIME_UPDATE(str)
 
     cfg_file_ = MUtility::getTempDir() + ip_ + ".dat";
 
@@ -199,6 +213,9 @@ void SimulatorWidget::detectorEditButtonClicked()
 
 void SimulatorWidget::connectButtonClicked()
 {
+    test_dlg_->setPtr(road_branch_widget_);
+    test_dlg_->exec();
+#if 0
     conn_tip_label_->clear();
     if (conn_status_)
     {
@@ -216,10 +233,14 @@ void SimulatorWidget::connectButtonClicked()
         conn_button_->setEnabled(false);
         conn_tip_label_->setText(STRING_UI_CONNECT + "...");
     }
+#endif
 }
 
 void SimulatorWidget::connectEstablishedSlot()
 {
+    conn_status_ = true;
+    conn_button_->setEnabled(true);
+    conn_button_->setText(STRING_UI_DISCONNECT);
     conn_timer_->stop();
     sync_cmd_->ReadTscVersion(this, SLOT(onCmdGetVerIdSlot(QByteArray&)));
     conn_tip_label_->setText("version checking...");
@@ -231,12 +252,14 @@ void SimulatorWidget::connectEstablishedSlot()
 
 void SimulatorWidget::disconnectedSlot()
 {
-
+    conn_status_ = false;
+    conn_tip_label_->setText("disconnected");
+    conn_button_->setText(STRING_UI_CONNECT);
 }
 
-void SimulatorWidget::connectErrorSlot(const QString &)
+void SimulatorWidget::connectErrorSlot(const QString &str)
 {
-
+    conn_tip_label_->setText(str);
 }
 
 void SimulatorWidget::onCmdGetVerIdSlot(QByteArray &array)
@@ -246,6 +269,7 @@ void SimulatorWidget::onCmdGetVerIdSlot(QByteArray &array)
     if (strcmp(ver, "CYT0V100END") != 0)
     {
         conn_tip_label_->setText("version error");
+        return;
     }
 
     killTimer(ver_check_id_);
@@ -365,8 +389,26 @@ void SimulatorWidget::onCmdParseParam(QByteArray &array)
             {
                 QMessageBox::information(this, STRING_TIP, "Parse Light status failed.", STRING_OK);
             }
+            else
+            {
+                sync_cmd_->GetTscTime();
+                if (!is_uitimer_started_)
+                {
+                    ui_timer_id_ = startTimer(3600*1000);
+                    is_uitimer_started_ = true;
+                }
+            }
             break;
         case '4':
+            status = parseConfigContent(recv_array_);
+            if (status)
+            {
+                QFile file(cfg_file_+".tmp");
+                file.open(QIODevice::WriteOnly);
+                file.write(recv_array_);
+                file.close();
+                recv_array_.clear();
+            }
             break;
         case '5':
             status = parseCountDownContent(recv_array_);
@@ -393,16 +435,22 @@ void SimulatorWidget::onCmdParseParam(QByteArray &array)
         case '8':
             break;
         case '9':
+            status = parseDetectorFlowContent(recv_array_);
             break;
         case 'A':
+            status = parseDetectorFaultContent(recv_array_);
             break;
         case 'B':
+            status = parseRealTimeFlowContent(recv_array_);
             break;
         case 'C':
+            status = parseDriverStatusContent(recv_array_);
             break;
         case 'D':
+            status = parseDriverRealtimeStatusContent(recv_array_);
             break;
         case 'E':
+            status = parseLightRealTimeStatusContent(recv_array_);
             break;
         case 'F':
             status = parseAllLightOnContent(recv_array_);
@@ -431,11 +479,14 @@ void SimulatorWidget::connTimerTimeoutSlot()
 void SimulatorWidget::signalerTimerTimeoutSlot()
 {
     date_time_ = date_time_.addSecs(1);
-    signaler_time_label_->setText(date_time_.toString("yyyy-MM-dd hh:mm:ss"));
+//    signaler_time_label_->setText("<font size=10>" + date_time_.toString("yyyy-MM-dd hh:mm:ss") + "</font>");
+    QString str = date_time_.toString("yyyy-MM-dd hh:mm:ss");
+    SIGNALER_TIME_UPDATE(str)
     sec_count_++;
     if (sec_count_ % 3 == 0)
     {
         // TODO: update schedule info
+        updateScheduleInfo();
         sec_count_ = 0;
     }
 }
@@ -485,6 +536,10 @@ void SimulatorWidget::timerEvent(QTimerEvent *)
     {
         connectEstablishedSlot();
     }
+    if (ui_timer_id_ != 0)
+    {
+        sync_cmd_->GetTscTime();
+    }
 }
 
 void SimulatorWidget::initPage()
@@ -521,8 +576,17 @@ void SimulatorWidget::initSignalSlots()
     connect(conn_button_, SIGNAL(clicked()), this, SLOT(connectButtonClicked()));
 
     connect(sync_cmd_, SIGNAL(connectedSignal()), this, SLOT(connectEstablishedSlot()));
-    connect(sync_cmd_, SIGNAL(connectErrorStrSignal(QString)), this, SLOT(connectErrorSlot(QString)));
+//    connect(sync_cmd_, SIGNAL(connectErrorStrSignal(QString)), this, SLOT(connectErrorSlot(QString)));
     connect(sync_cmd_, SIGNAL(disconnectedSignal()), this, SLOT(disconnectedSlot()));
+    connect(sync_cmd_, SIGNAL(connectErrorStrSignal(QString)), conn_tip_label_, SLOT(setText(QString)));
+
+    connect(conn_timer_, SIGNAL(timeout()), this, SLOT(connTimerTimeoutSlot()));
+    connect(signaler_timer_, SIGNAL(timeout()), this, SLOT(signalerTimerTimeoutSlot()));
+    connect(count_down_timer_, SIGNAL(timeout()), this, SLOT(countDownTimerTimeoutSlot()));
+
+    connect(test_dlg_, SIGNAL(showChannelLightSignal(int,int)), road_branch_widget_, SLOT(laneIndexSlot(int,int)));
+    connect(test_dlg_, SIGNAL(showLaneDetectorSignal(int,int,bool)), road_branch_widget_, SLOT(showDetectorSlot(int,int,bool)));
+    connect(test_dlg_, SIGNAL(showSidewalkDetectorSignal(int,int,bool)), road_branch_widget_, SLOT(showDetectorSlot(int,int,bool)));
 }
 
 void SimulatorWidget::initComSettingLayout()
@@ -890,8 +954,9 @@ void SimulatorWidget::updateScheduleInfo()
 
 bool SimulatorWidget::checkLaneId()
 {
-    QList<int> lane_id_list = road_branch_widget_->getLaneIdList();
-    if (lane_id_list.contains(0))
+    QList<int> lane_detector_id_list = road_branch_widget_->getLaneDetectorIdList();
+    QList<int> sidewalk_detector_id_list = road_branch_widget_->getSidewalkDetectorIdList();
+    if (lane_detector_id_list.contains(0) || sidewalk_detector_id_list.contains(0))
     {
         QMessageBox::information(this, STRING_TIP, STRING_UI_EXISTS_INVALID_LANEID, STRING_OK);
         return false;
@@ -903,7 +968,7 @@ void SimulatorWidget::packComData(int lane_index)
 {
     com_array_.clear();
     SerialData com_data;
-    QList<int> lane_id_list = road_branch_widget_->getLaneIdList();
+    QList<int> lane_id_list = road_branch_widget_->getLaneDetectorIdList();
     curr_lane_id_ = lane_id_list.at(lane_index);
     need_leave_ = false;
     if (curr_lane_id_ >= 1 && curr_lane_id_ <= 48)
@@ -1178,7 +1243,7 @@ bool SimulatorWidget::parseCountDownContent(QByteArray &array)
     str.sprintf("%d / %d", curr_stage_id_, total_stage_count_);
     stage_id_label_->setText(str);
     curr_phase_id_label_->setText(phaseBitsDesc(count_down_info_.phase_ids));
-    ctrl_mode_label_->setText("ctrl_mode_desc");
+    ctrl_mode_label_->setText(ctrl_mode_desc_map_.value(count_down_info_.ctrl_mode));
 
     count_down_secs_ = count_down_info_.light_time;
     count_down_light_ = count_down_info_.light_corlor;
@@ -1234,8 +1299,10 @@ bool SimulatorWidget::parseTSCTimeContent(QByteArray &array)
     {
         seconds -= 60*60*8;
     }
-    QDateTime datetime = QDateTime::fromTime_t(seconds).toLocalTime();
-    signaler_time_label_->setText(datetime.toString("yyyy-MM-dd hh:mm:ss"));
+    date_time_ = QDateTime::fromTime_t(seconds).toLocalTime();
+//    signaler_time_label_->setText("<font size=10>" + date_time_.toString("yyyy-MM-dd hh:mm:ss") + "</font>");
+    QString str = date_time_.toString("yyyy-MM-dd hh:mm:ss");
+    SIGNALER_TIME_UPDATE(str)
 
     return true;
 }
@@ -1256,6 +1323,55 @@ bool SimulatorWidget::parseAllLightOnContent(QByteArray &array)
     // set lane light the same color
     // set sidewalk the same color
 
+    return true;
+}
+
+bool SimulatorWidget::parseDetectorFlowContent(QByteArray &array)
+{
+    array.remove(0,4);
+    int idx = array.indexOf("END");
+    array.remove(idx, 3);
+    array.remove(0,4);
+    return true;
+}
+
+bool SimulatorWidget::parseDetectorFaultContent(QByteArray &array)
+{
+    array.remove(0,4);
+    int idx = array.indexOf("END");
+    array.remove(0, idx+3);
+//    array.remove(0,4);
+    return true;
+}
+
+bool SimulatorWidget::parseDriverStatusContent(QByteArray &array)
+{
+    array.remove(0,4);
+    int idx = array.indexOf("END");
+    array.remove(0, idx+3);
+    return true;
+}
+
+bool SimulatorWidget::parseRealTimeFlowContent(QByteArray &array)
+{
+    array.remove(0,4);
+    array.remove(0,4);
+    return true;
+}
+
+bool SimulatorWidget::parseDriverRealtimeStatusContent(QByteArray &array)
+{
+    array.remove(0,4);
+    int idx = array.indexOf("END");
+    array.remove(0, idx+3);
+    return true;
+}
+
+bool SimulatorWidget::parseLightRealTimeStatusContent(QByteArray &array)
+{
+    array.remove(0,4);
+    int idx = array.indexOf("END");
+    array.remove(0, idx+3);
     return true;
 }
 

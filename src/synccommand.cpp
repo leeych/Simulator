@@ -1,6 +1,8 @@
 #include "synccommand.h"
 #include "command.h"
-#include "macrostring.h"
+#include "macrostrings.h"
+
+#define SOCKET_WAIT_MS 30000
 
 SyncCommand *SyncCommand::instance_ = NULL;
 

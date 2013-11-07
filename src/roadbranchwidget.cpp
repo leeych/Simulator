@@ -122,7 +122,7 @@ void RoadBranchWidget::enableLaneIdCmbSlot(bool enable)
 
 void RoadBranchWidget::showDetectorSlot(int id, int color, bool show)
 {
-    if (id > 12)
+    if (id >= 12)
     {
         showSidewalkDetector((SidewalkId)id, show);
     }
@@ -336,9 +336,11 @@ void RoadBranchWidget::initLightList()
 
 }
 
-QList<int>& RoadBranchWidget::getLaneIdList()
+QList<int> &RoadBranchWidget::getLaneDetectorIdList()
 {
-    lane_detector_id_list_.clear();
+//    lane_detector_id_list_.clear();
+    QList<int> empty_list;
+    lane_detector_id_list_.swap(empty_list);
     for (int i = 0; i < lane_cmb_list_.size(); i++)
     {
         int id = lane_cmb_list_.at(i)->currentText().toInt();
@@ -347,24 +349,64 @@ QList<int>& RoadBranchWidget::getLaneIdList()
     return lane_detector_id_list_;
 }
 
+QList<int> &RoadBranchWidget::getSidewalkDetectorIdList()
+{
+    sidewalk_detector_id_list_.clear();
+    for (int i = 0; i < sidewalk_cmb_list_.size(); i++)
+    {
+        int id = sidewalk_cmb_list_.at(i)->currentText().toInt();
+        sidewalk_detector_id_list_.append(id);
+    }
+    return sidewalk_detector_id_list_;
+}
+
+QMap<int, int> &RoadBranchWidget::getLaneDetectorIdIndexMap()
+{
+    lane_detector_map_.clear();
+    getLaneDetectorIdList();
+    for (int i = 0; i < lane_detector_id_list_.size(); i++)
+    {
+        lane_detector_map_.insert(lane_detector_id_list_.at(i), i);
+    }
+    return lane_detector_map_;
+}
+
+QMap<int, int> &RoadBranchWidget::getSidewalkDetectorIdIndexMap()
+{
+    sidewalk_detector_map_.clear();
+    getSidewalkDetectorIdList();
+    for (int i = 0; i < sidewalk_detector_id_list_.size(); i++)
+    {
+        sidewalk_detector_map_.insert(sidewalk_detector_id_list_.at(i), i+12);
+    }
+    return sidewalk_detector_map_;
+}
+
 void RoadBranchWidget::updateLaneLight(int id, LightColor color)
 {
-    if (id <= 0)
+    if (id < 0)
     {
         return;
     }
     int index = id;
     if (id <= 12)
     {
+        index = id - 1;
         switch(color)
         {
         case Green:
+            lane_light_list_.at(index+12)->hide();
+            lane_light_list_.at(index+12*2)->hide();
             lane_light_list_.at(index)->show();
             break;
         case Red:
+            lane_light_list_.at(index)->hide();
+            lane_light_list_.at(index+12*2)->hide();
             lane_light_list_.at(index+12)->show();
             break;
         case Yellow:
+            lane_light_list_.at(index)->hide();
+            lane_light_list_.at(index+12)->hide();
             lane_light_list_.at(index+12*2)->show();
             break;
         case Off:
@@ -382,10 +424,14 @@ void RoadBranchWidget::updateLaneLight(int id, LightColor color)
         switch (color)
         {
         case Green:
+            sidewalk_light_label_list_.at(index+8)->hide();
+            sidewalk_light_label_list_.at(index+8+4)->hide();
             sidewalk_light_label_list_.at(index)->show();
             sidewalk_light_label_list_.at(index+4)->show();
             break;
         case Red:
+            sidewalk_light_label_list_.at(index)->hide();
+            sidewalk_light_label_list_.at(index+4)->hide();
             sidewalk_light_label_list_.at(index+8)->show();
             sidewalk_light_label_list_.at(index+8+4)->show();
             break;
@@ -403,51 +449,38 @@ void RoadBranchWidget::updateLaneLight(int id, LightColor color)
     }
 }
 
-void RoadBranchWidget::showLaneDetector(int id, RoadBranchWidget::LightColor color, bool show)
+void RoadBranchWidget::showLaneDetector(int index, RoadBranchWidget::LightColor color, bool show)
 {
-    if (id <= 0 || id > 12)
+    if (index < 0 || index >= 12)
     {
         return;
     }
-    int index = id;
-    index--;
     switch (color)
     {
     case Green:
+        detector_label_list_.at(index+12)->hide();
         detector_label_list_.at(index)->setVisible(show);
         break;
     case Red:
+        detector_label_list_.at(index)->hide();
         detector_label_list_.at(index+12)->setVisible(show);
         break;
     case Yellow:
         break;
     case Off:
-        detector_label_list_.at(index)->setVisible(show);
-        detector_label_list_.at(index+12)->setVisible(show);
+        detector_label_list_.at(index)->hide();
+        detector_label_list_.at(index+12)->hide();
         break;
-    default:
-        detector_label_list_.at(index)->setVisible(show);
-        detector_label_list_.at(index+12)->setVisible(show);
+    default:/*
+        detector_label_list_.at(index)->hide();
+        detector_label_list_.at(index+12)->hide();*/
         break;
     }
-
 }
 
-void RoadBranchWidget::showSidewalkDetector(SidewalkId sidewalk_id, bool show)
+void RoadBranchWidget::showSidewalkDetector(int index, bool show)
 {
-    int index = sidewalk_id-13;
-    switch (sidewalk_id)
-    {
-    case SId_13:
-    case SId_14:
-    case SId_15:
-    case SId_16:
-    {
-        sidewalk_label_list_.at(index)->setVisible(show);
-        sidewalk_label_list_.at(index+4)->setVisible(show);
-    }
-        break;
-    default:
-        break;
-    }
+    index -= 12;
+    sidewalk_label_list_.at(index)->setVisible(show);
+//    sidewalk_label_list_.at(index+4)->setVisible(show);
 }

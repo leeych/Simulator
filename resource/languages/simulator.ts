@@ -223,5 +223,185 @@
         <source>Sidewalk</source>
         <translation>人行道</translation>
     </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="58"/>
+        <source>IP</source>
+        <translation>IP</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="61"/>
+        <source>Connected host refused</source>
+        <translation>连接被主机拒绝</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="62"/>
+        <source>Remote host closed</source>
+        <translation>远程主机已关闭</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="63"/>
+        <source>Host not found</source>
+        <translation>主机未找到</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="64"/>
+        <source>Socket access error</source>
+        <translation>套接字访问错误</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="65"/>
+        <source>Socket resource error</source>
+        <translation>当前系统资源不足</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="66"/>
+        <source>Socket timeout error</source>
+        <translation>套接字操作超时</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="67"/>
+        <source>Datagram is too large</source>
+        <translation>数据大小超过的当前系统的上限</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="68"/>
+        <source>Network error</source>
+        <translation>网络连接错误(请插好网线)</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="69"/>
+        <source>Address is in use</source>
+        <translation>网络地址已被占用</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="70"/>
+        <source>Socket address not available</source>
+        <translation>主机地址不可用</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="71"/>
+        <source>Unsupported socket operation</source>
+        <translation>本机系统不支持此操作</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="72"/>
+        <source>Unfinished socket operation</source>
+        <translation>上一操作尚未完成</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="73"/>
+        <source>Proxy authentication required</source>
+        <translation>套接字使用的代理需要认证</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="74"/>
+        <source>SSL handshake failed</source>
+        <translation>SSL/TLS握手失败，连接关闭</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="75"/>
+        <source>Proxy connection refused</source>
+        <translation>代理服务器连接被拒绝</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="76"/>
+        <source>Proxy connection closed</source>
+        <translation>代理连接已关闭</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="77"/>
+        <source>Proxy connection timeout</source>
+        <translation>代理服务器连接超时</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="78"/>
+        <source>Proxy not found</source>
+        <translation>找不到代理服务器</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="79"/>
+        <source>Proxy protocol error</source>
+        <translation>代理协议错误</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="80"/>
+        <source>Unknown error</source>
+        <translation>未知的网络错误</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="83"/>
+        <source>Autonomous ctrl</source>
+        <translation>自主控制</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="84"/>
+        <source>Close lights ctrl</source>
+        <translation>关灯</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="85"/>
+        <source>Yellow flash ctrl</source>
+        <translation>黄闪</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="86"/>
+        <source>All red ctrl</source>
+        <translation>全红</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="87"/>
+        <source>Coordinate ctrl</source>
+        <translation>协调控制</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="88"/>
+        <source>Full induction ctrl</source>
+        <translation>全感应</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="89"/>
+        <source>Main road half induction ctrl</source>
+        <translation>主道半感应</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="90"/>
+        <source>Secondary road half induction ctrl</source>
+        <translation>次道半感应</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="91"/>
+        <source>Single point adapt ctrl</source>
+        <translation>单点自适应</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="92"/>
+        <source>Pedestrian crossing</source>
+        <translation>行人过街</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="93"/>
+        <source>Coordinate induction</source>
+        <translation>协调感应</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="94"/>
+        <source>Bus first</source>
+        <translation>公交优先</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="95"/>
+        <source>Traffic control</source>
+        <translation>交通管制</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="96"/>
+        <source>Manual control</source>
+        <translation>人工手动控制</translation>
+    </message>
+    <message>
+        <location filename="../../src/macrostrings.h" line="97"/>
+        <source>System fault cause to yellow flash</source>
+        <translation>系统故障黄闪</translation>
+    </message>
 </context>
 </TS>

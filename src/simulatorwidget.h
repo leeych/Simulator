@@ -22,6 +22,8 @@ class QTimer;
 class DetectorIdEditWidget;
 class SyncCommand;
 
+class TestDlg;
+
 
 typedef struct BeginMonitorTag
 {
@@ -133,6 +135,13 @@ private:
     bool parseTSCTimeContent(QByteArray &array);
     bool parseAllLightOnContent(QByteArray &array);
 
+    bool parseDetectorFlowContent(QByteArray &array);
+    bool parseDetectorFaultContent(QByteArray &array);
+    bool parseDriverStatusContent(QByteArray &array);
+    bool parseRealTimeFlowContent(QByteArray &array);
+    bool parseDriverRealtimeStatusContent(QByteArray &array);
+    bool parseLightRealTimeStatusContent(QByteArray &array);
+
     QString phaseBitsDesc(unsigned int phase_ids);
     void dumpComData();
     void test();
@@ -156,6 +165,8 @@ private:
     bool conn_status_;
     int ver_check_id_;  // version check timer id
     bool is_inited_;    // tsc time update flag
+    int ui_timer_id_;   // used for signaler time
+    bool is_uitimer_started_;
 
     SyncCommand *sync_cmd_;
     TSCParam tsc_param_;
@@ -210,6 +221,8 @@ private:
     DetectorIdEditWidget *detector_edit_dlg_;
     QLineEdit *ip_lineedit_, *port_lineedit_;
     QLabel *conn_tip_label_;
+
+    TestDlg *test_dlg_;
 
 };
 
