@@ -8,6 +8,8 @@
 #include "roadbranchwidget.h"
 #include "win_qextserialport.h"
 #include "tscparam.h"
+#include "mdatabase.h"
+#include "phasehandler.h"
 
 class QTextEdit;
 class QTextBrowser;
@@ -79,9 +81,10 @@ public:
     };
 
 signals:
-    void laneIndexSignal(int index, int color);
+    void showLightSignal(int index, int color);
     void closeLightSignal();
     void enableLaneIdCmbSignal(bool);
+    void showLaneDetectorSignal(int index, int color, bool show);
 
 public slots:
     void startSimulatorToggledSlot(bool);
@@ -117,9 +120,8 @@ private:
 
     void initCtrlModeDesc();
     bool initTscParam();
-
     void updateScheduleInfo();
-
+    unsigned char getPhaseType(unsigned char phase_id);
     bool checkLaneId();
     void packComData(int lane_index);
     void initMyComSetting();
@@ -127,7 +129,6 @@ private:
     void enableComSetting(bool enable);
 
     bool checkPackage(QByteArray &array);
-
     bool parseConfigContent(QByteArray &array);
     bool parseBeginMonitorContent(QByteArray &array);
     bool parseLightStatusContent(QByteArray &array);
@@ -142,6 +143,7 @@ private:
     bool parseDriverRealtimeStatusContent(QByteArray &array);
     bool parseLightRealTimeStatusContent(QByteArray &array);
 
+    void simualtorComdataDispatcher();
     QString phaseBitsDesc(unsigned int phase_ids);
     void dumpComData();
     void test();
@@ -199,6 +201,11 @@ private:
     ChannelStatusInfo channel_status_bak_;  // used for revert lights' status
 
     QMap<unsigned char, QString> ctrl_mode_desc_map_;
+    QList<int> phase_id_list_;
+    int pre_lane_idx_;
+
+    MDatabase *db_ptr_;
+    PhaseHandler *phase_handler_;
 
 private:
     QComboBox *port_cmb_, *baud_rate_cmb_, *data_bit_cmb_, *stop_cmb_, *parity_cmb_;

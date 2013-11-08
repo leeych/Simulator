@@ -100,9 +100,9 @@ void TestDlg::initPage()
     cancel_sidewalk_d_button_ = new QPushButton("S cancel");
 
     color_cmb_ = new QComboBox;
-    color_cmb_->addItem("Green");
     color_cmb_->addItem("Red");
     color_cmb_->addItem("Yellow");
+    color_cmb_->addItem("Green");
     color_cmb_->addItem("Off");
     channel_id_cmb_ = new QComboBox;
     for (int i = 0; i < 60; i++)

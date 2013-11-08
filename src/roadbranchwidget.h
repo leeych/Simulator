@@ -27,12 +27,12 @@ public:
 
     enum LightColor
     {
-        Green,
-        Red,
+        Red = 0,
         Yellow,
-        Off
+        Green,
+        Off,
+        Invalid
     };
-
     enum SidewalkId
     {
         SId_13 = 13,
