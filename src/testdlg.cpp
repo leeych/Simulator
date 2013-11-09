@@ -1,10 +1,12 @@
 #include "testdlg.h"
 #include "macrostrings.h"
 #include "roadbranchwidget.h"
+#include "mutility.h"
 
 #include <QPushButton>
 #include <QComboBox>
 #include <QGridLayout>
+#include <QDir>
 
 #define DETECTOR_TEST_MACRO(signal) \
     int id = channel_id_cmb_->currentText().toInt(); \
@@ -90,6 +92,42 @@ void TestDlg::OnCancelSDetectorButtonClicked()
     DETECTOR_TEST_MACRO(showSidewalkDetectorSignal(index, color, false))
 }
 
+void TestDlg::OnGenDataButtonClicked()
+{
+    QString dir = MUtility::getTempDir();
+    QString postfix = "test.dat";
+    QDir file_dir;
+    file_dir.setPath(dir);
+    QStringList fd_list = file_dir.entryList(QDir::Files, QDir::NoSort);
+    int sz = fd_list.size();
+    QFile file_w(MUtility::getConfigDir()+"result.dat");
+    file_w.open(QIODevice::WriteOnly | QIODevice::Append);
+    for (int i = 1; i <= sz; i++)
+    {
+        QFile file(dir + QString::number(i) + postfix);
+        file.open(QIODevice::ReadOnly);
+        QByteArray data_arr = file.readAll();
+        int head_idx = data_arr.indexOf("CYT");
+        int tail_idx = data_arr.indexOf("END");
+        QByteArray first_line = data_arr.left(tail_idx+3);
+        file_w.write(first_line);
+        file.close();
+    }
+    file_w.close();
+}
+
+void TestDlg::OnReadDataButtonClicked()
+{
+    QString dir = MUtility::getConfigDir() + "result.dat";
+    QFile file(dir);
+    if (!file.open(QIODevice::ReadOnly))
+    {
+        return;
+    }
+    QByteArray array = file.readAll();
+    emit sendNetworkByteArray(array);
+}
+
 void TestDlg::initPage()
 {
     ok_button_ = new QPushButton(STRING_OK);
@@ -98,6 +136,9 @@ void TestDlg::initPage()
     cancel_lane_d_button_ = new QPushButton("L cancel");
     sidewalk_detector_button_ = new QPushButton("Sidewalk");
     cancel_sidewalk_d_button_ = new QPushButton("S cancel");
+
+    gen_data_button_ = new QPushButton("test data");
+    read_test_button_ = new QPushButton("read data");
 
     color_cmb_ = new QComboBox;
     color_cmb_->addItem("Red");
@@ -122,6 +163,9 @@ void TestDlg::initPage()
     glayout->addWidget(sidewalk_detector_button_, 3, 0, 1, 1);
     glayout->addWidget(cancel_sidewalk_d_button_, 3, 1, 1, 1);
 
+    glayout->addWidget(gen_data_button_, 4, 0, 1, 2);
+    glayout->addWidget(read_test_button_, 5, 0, 1, 2);
+
     setLayout(glayout);
 }
 
@@ -134,4 +178,7 @@ void TestDlg::initSignalSlots()
     connect(cancel_lane_d_button_, SIGNAL(clicked()), this, SLOT(OnCancelLDetectorButtonClicked()));
     connect(sidewalk_detector_button_, SIGNAL(clicked()), this, SLOT(OnSidewalkDetectorButtonClicked()));
     connect(cancel_sidewalk_d_button_, SIGNAL(clicked()), this, SLOT(OnCancelSDetectorButtonClicked()));
+
+    connect(gen_data_button_, SIGNAL(clicked()), this, SLOT(OnGenDataButtonClicked()));
+    connect(read_test_button_, SIGNAL(clicked()), this, SLOT(OnReadDataButtonClicked()));
 }

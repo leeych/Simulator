@@ -11,6 +11,7 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QTimer>
+#include <QDebug>
 
 RoadBranchWidget::RoadBranchWidget(QWidget *parent) :
     QWidget(parent)
@@ -97,6 +98,7 @@ void RoadBranchWidget::flashTimerTimeoutSlot()
 
 void RoadBranchWidget::laneIndexSlot(int index, int color)
 {
+    qDebug() << "lane id received:" << index;
     curr_index_ = index;
     updateLaneLight(curr_index_, LightColor(color));
 }
@@ -122,6 +124,7 @@ void RoadBranchWidget::enableLaneIdCmbSlot(bool enable)
 
 void RoadBranchWidget::showDetectorSlot(int id, int color, bool show)
 {
+    qDebug() << "detector id:" << id;
     if (id >= 12)
     {
         showSidewalkDetector((SidewalkId)id, show);
@@ -384,7 +387,7 @@ QMap<int, int> &RoadBranchWidget::getSidewalkDetectorIdIndexMap()
 
 void RoadBranchWidget::updateLaneLight(int id, LightColor color)
 {
-    if (id < 0)
+    if (id <= 0)
     {
         return;
     }

@@ -30,7 +30,7 @@
 #define VERSION_CHECK_MS    5000
 
 #define SIGNALER_TIME_UPDATE(str) \
-    signaler_time_label_->setText("<font size=5>" + str + "</font>");
+    signaler_time_label_->setText("<font size=4>" + str + "</font>");
 
 SimulatorWidget::SimulatorWidget(QWidget *parent) :
     QWidget(parent)
@@ -227,9 +227,13 @@ void SimulatorWidget::connectButtonClicked()
     test_dlg_->exec();
 #endif
 #if 0
+    ip_ = ip_lineedit_->text();
+    ip_ = MUtility::trimmedAll(ip_);
+    port_ = port_lineedit_->text().toInt();
     conn_tip_label_->clear();
     if (conn_status_)
     {
+        sync_cmd_->StopMonitoring();
         sync_cmd_->disconnectFromHost();
         if (ver_check_id_ != 0)
         {
@@ -539,6 +543,7 @@ void SimulatorWidget::closeEvent(QCloseEvent *)
         send_msg_timer_->stop();
     }
     sync_cmd_->StopMonitoring();
+    sync_cmd_->disconnectFromHost();
 }
 
 void SimulatorWidget::timerEvent(QTimerEvent *)
@@ -598,9 +603,11 @@ void SimulatorWidget::initSignalSlots()
     connect(signaler_timer_, SIGNAL(timeout()), this, SLOT(signalerTimerTimeoutSlot()));
     connect(count_down_timer_, SIGNAL(timeout()), this, SLOT(countDownTimerTimeoutSlot()));
 
+    // just for unit testing use
     connect(test_dlg_, SIGNAL(showChannelLightSignal(int,int)), road_branch_widget_, SLOT(laneIndexSlot(int,int)));
     connect(test_dlg_, SIGNAL(showLaneDetectorSignal(int,int,bool)), road_branch_widget_, SLOT(showDetectorSlot(int,int,bool)));
     connect(test_dlg_, SIGNAL(showSidewalkDetectorSignal(int,int,bool)), road_branch_widget_, SLOT(showDetectorSlot(int,int,bool)));
+    connect(test_dlg_, SIGNAL(sendNetworkByteArray(QByteArray&)), this, SLOT(onCmdParseParam(QByteArray&)));
 }
 
 void SimulatorWidget::initComSettingLayout()
@@ -1203,9 +1210,10 @@ bool SimulatorWidget::parseBeginMonitorContent(QByteArray &array)
     memcpy(&begin_monitor_info_, array.data(), sizeof(begin_monitor_info_));
     array.remove(0,2);
     // TODO: update lane light and sidewalk light
-    int index = begin_monitor_info_.channel_id-1;
-    emit showLightSignal(index, Off);   // close pre-light
-    emit showLightSignal(index, begin_monitor_info_.status);
+    int id = begin_monitor_info_.channel_id;
+    // if id > 16, did not emit signal
+    emit showLightSignal(id, Off);   // close pre-light
+    emit showLightSignal(id, begin_monitor_info_.status);
 
     return true;
 }
@@ -1377,7 +1385,7 @@ bool SimulatorWidget::parseAllLightOnContent(QByteArray &array)
     array.remove(0,4);
     // TODO: update ui
     // set lane and sidewalk light the same color
-    for (int i = 0; i < 16; i++)
+    for (int i = 1; i < 16+1; i++)
     {
         emit showLightSignal(i, light_color);
     }
