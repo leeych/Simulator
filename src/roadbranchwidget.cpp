@@ -98,7 +98,7 @@ void RoadBranchWidget::flashTimerTimeoutSlot()
 
 void RoadBranchWidget::laneIndexSlot(int index, int color)
 {
-    qDebug() << "lane id received:" << index;
+//    qDebug() << "lane id received:" << index;
     curr_index_ = index;
     updateLaneLight(curr_index_, LightColor(color));
 }
@@ -114,18 +114,22 @@ void RoadBranchWidget::closeLightSlot()
     }
 }
 
-void RoadBranchWidget::enableLaneIdCmbSlot(bool enable)
+void RoadBranchWidget::enableDetectorIdCmbSlot(bool enable)
 {
     for (int i = 0; i < lane_cmb_list_.size(); i++)
     {
         lane_cmb_list_.at(i)->setEnabled(enable);
     }
+    for (int i = 0; i < sidewalk_cmb_list_.size(); i++)
+    {
+        sidewalk_cmb_list_.at(i)->setEnabled(enable);
+    }
 }
 
 void RoadBranchWidget::showDetectorSlot(int id, int color, bool show)
 {
-    qDebug() << "detector id:" << id;
-    if (id >= 12)
+    qDebug() << "show detector id:" << id;
+    if (id > 12)
     {
         showSidewalkDetector((SidewalkId)id, show);
     }
@@ -196,8 +200,8 @@ void RoadBranchWidget::initLaneDetectorList()
         lane_cmb_list_.append(cmb);
     }
 
-    cmb_rect_list_ << QRect(318,523,36,26) << QRect(0,319,36,26) << QRect(162,1,36,26) << QRect(514,197,36,26)
-                   << QRect(355,523,36,26) << QRect(0,355,36,26) << QRect(198,1,36,26) << QRect(514,161,36,26)
+    cmb_rect_list_ << QRect(318,523,36,26) << QRect(0,319,36,26) << QRect(198,1,36,26) << QRect(514,197,36,26)
+                   << QRect(355,523,36,26) << QRect(0,355,36,26) << QRect(162,1,36,26) << QRect(514,161,36,26)
                    << QRect(281,523,36,26) << QRect(0,283,36,26) << QRect(234,1,36,26) << QRect(514,234,36,26);
     for (int i = 0; i < 12; i++)
     {
@@ -452,12 +456,14 @@ void RoadBranchWidget::updateLaneLight(int id, LightColor color)
     }
 }
 
-void RoadBranchWidget::showLaneDetector(int index, RoadBranchWidget::LightColor color, bool show)
+void RoadBranchWidget::showLaneDetector(int id, RoadBranchWidget::LightColor color, bool show)
 {
-    if (index < 0 || index >= 12)
+    int index = id;
+    if (index < 0 || index > 12)
     {
         return;
     }
+    qDebug() << "show lane detector index:" << index;
     switch (color)
     {
     case Green:
@@ -484,6 +490,10 @@ void RoadBranchWidget::showLaneDetector(int index, RoadBranchWidget::LightColor 
 void RoadBranchWidget::showSidewalkDetector(int index, bool show)
 {
     index -= 12;
+    if (index >= 8 || index < 0)
+    {
+        return;
+    }
     sidewalk_label_list_.at(index)->setVisible(show);
 //    sidewalk_label_list_.at(index+4)->setVisible(show);
 }

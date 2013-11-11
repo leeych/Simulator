@@ -43,6 +43,7 @@ public:
 
 signals:
     void laneIndexSignal(int);
+    void redDetectorSignal(int detector_id);
 
 public slots:
     void laneDetectorcmbItemSelectedSlot(int);
@@ -50,7 +51,7 @@ public slots:
     void flashTimerTimeoutSlot();
     void laneIndexSlot(int index, int color);
     void closeLightSlot();
-    void enableLaneIdCmbSlot(bool enable);
+    void enableDetectorIdCmbSlot(bool enable);
     void showDetectorSlot(int id, int color, bool show);
 
 private:

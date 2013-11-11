@@ -2,7 +2,7 @@
 
 SerialData::SerialData():
     type(0x01 + '\0'),
-    lane_id(0x01 + '\0')
+    detector_id(0x01 + '\0')
 {
     ms_time[0] = '\0';
     ms_time[1] = '\0';

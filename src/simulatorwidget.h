@@ -83,7 +83,7 @@ public:
 signals:
     void showLightSignal(int index, int color);
     void closeLightSignal();
-    void enableLaneIdCmbSignal(bool);
+    void enableDetectorIdCmbSignal(bool);
     void showLaneDetectorSignal(int index, int color, bool show);
 
 public slots:
@@ -127,6 +127,8 @@ private:
     void initMyComSetting();
     QString formatComData(const QByteArray &array);
     void enableComSetting(bool enable);
+    void initPreDetectorColorList();
+    void initRedDetectorFlagList();
 
     bool checkPackage(QByteArray &array);
     bool parseConfigContent(QByteArray &array);
@@ -144,6 +146,7 @@ private:
     bool parseLightRealTimeStatusContent(QByteArray &array);
 
     void simualtorComdataDispatcher();
+    void updateDetectorStatus(int detector_index);
     QString phaseBitsDesc(unsigned int phase_ids);
     void dumpComData();
     void test();
@@ -152,8 +155,9 @@ private:
     struct PortSettings my_com_setting_;
 
     QByteArray com_array_;
-    int curr_lane_index_;
+    int curr_lane_idx_;
     int curr_lane_id_;
+    RoadBranchWidget::LightColor curr_color_;
     bool serial_status_;
 
     QTimer *send_msg_timer_;
@@ -203,9 +207,13 @@ private:
     QMap<unsigned char, QString> ctrl_mode_desc_map_;
     QList<int> phase_id_list_;
     int pre_lane_idx_;
+    QList<RoadBranchWidget::LightColor> pre_detector_color_list_;
+    QList<int> detector_red_flag_list_;
 
     MDatabase *db_ptr_;
     PhaseHandler *phase_handler_;
+    bool is_first_;
+    bool is_first_send_;
 
 private:
     QComboBox *port_cmb_, *baud_rate_cmb_, *data_bit_cmb_, *stop_cmb_, *parity_cmb_;

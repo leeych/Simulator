@@ -39,7 +39,7 @@ SimulatorWidget::SimulatorWidget(QWidget *parent) :
     my_com_ = new Win_QextSerialPort("com1", my_com_setting_, QextSerialBase::EventDriven);
     detector_edit_dlg_ = new DetectorIdEditWidget(this);
 
-    curr_lane_index_ = 0;
+    curr_lane_idx_ = 0;
     curr_lane_id_ = 0;
     serial_status_ = false;
     send_msg_timer_ = new QTimer(this);
@@ -70,10 +70,15 @@ SimulatorWidget::SimulatorWidget(QWidget *parent) :
     db_ptr_ = MDatabase::GetInstance();
     phase_handler_ = new PhaseHandler;
 
+    is_first_ = true;
+    is_first_send_ = true;
+
     setWindowTitle(STRING_UI_WINDOW_TITLE);
     initPage();
     initSignalSlots();
     initCtrlModeDesc();
+    initPreDetectorColorList();
+    initRedDetectorFlagList();
     setFixedSize(826+170,606);
     start_button_->setEnabled(false);
 }
@@ -132,7 +137,7 @@ void SimulatorWidget::startSimulatorToggledSlot(bool checked)
     initMyComSetting();
     if (checked)
     {
-//        emit enableLaneIdCmbSignal(false);
+        emit enableDetectorIdCmbSignal(false);
         start_button_->setText(STRING_UI_STOP);
         int secs = timespan_spinbox_->value();
         send_msg_timer_->start(secs*1000);
@@ -151,7 +156,7 @@ void SimulatorWidget::startSimulatorToggledSlot(bool checked)
         send_msg_timer_->stop();
         timer_->stop();
         enableComSetting(true);
-        emit enableLaneIdCmbSignal(true);
+        emit enableDetectorIdCmbSignal(true);
         road_branch_widget_->closeLightSlot();
     }
 }
@@ -165,10 +170,16 @@ void SimulatorWidget::sendMsgTimerTimeOutSlot()
     qDebug() << "send msg time out";
     startSimulatorToggledSlot(true);
 }
-
+/* 1. 检查当前车道是否在当前相位的所控制的通道中且为可通行状态
+ * 2. 如果可通行则放行，否则等待计时器清零，什么也不做。
+*/
 void SimulatorWidget::timerTimeOutSlot()
 {
     timer_->stop();
+    // com data send refresh
+    packComData(pre_lane_idx_);
+    need_leave_ = false;
+
     com_array_[1] = 0x02 + '\0';
     char ms[4] = {'\0'};
     int secs = QDateTime::currentDateTime().toTime_t();
@@ -176,7 +187,9 @@ void SimulatorWidget::timerTimeOutSlot()
     com_array_[3] = ms[0];
     com_array_[4] = ms[1];
     txt_edit_->insertPlainText(formatComData(com_array_)+"\n");
-    emit showLightSignal(curr_lane_index_, RoadBranchWidget::Red);
+    emit showLaneDetectorSignal(curr_lane_idx_, RoadBranchWidget::Green, false);
+    emit showLaneDetectorSignal(curr_lane_idx_, RoadBranchWidget::Red, true);
+    detector_red_flag_list_[curr_lane_idx_] = 0;
     int sz = my_com_->write(com_array_);
 }
 
@@ -222,11 +235,11 @@ void SimulatorWidget::detectorEditButtonClicked()
 
 void SimulatorWidget::connectButtonClicked()
 {
-#if 1
+#if 0
     test_dlg_->setPtr(road_branch_widget_);
     test_dlg_->exec();
 #endif
-#if 0
+#if 1
     ip_ = ip_lineedit_->text();
     ip_ = MUtility::trimmedAll(ip_);
     port_ = port_lineedit_->text().toInt();
@@ -404,7 +417,7 @@ void SimulatorWidget::onCmdParseParam(QByteArray &array)
             {
                 QMessageBox::information(this, STRING_TIP, "Parse Light status failed.", STRING_OK);
             }
-            else
+            else if (is_first_)
             {
                 sync_cmd_->GetTscTime();
                 if (!is_uitimer_started_)
@@ -412,6 +425,7 @@ void SimulatorWidget::onCmdParseParam(QByteArray &array)
                     ui_timer_id_ = startTimer(3600*1000);
                     is_uitimer_started_ = true;
                 }
+                is_first_ = false;
             }
             break;
         case '4':
@@ -586,7 +600,7 @@ void SimulatorWidget::initSignalSlots()
     connect(start_button_, SIGNAL(toggled(bool)), this, SLOT(startSimulatorToggledSlot(bool)));
     connect(this, SIGNAL(showLightSignal(int, int)), road_branch_widget_, SLOT(laneIndexSlot(int, int)));
 //    connect(this, SIGNAL(closeLightSignal()), road_branch_widget_, SLOT(closeLightSlot()));
-    connect(this, SIGNAL(enableLaneIdCmbSignal(bool)), road_branch_widget_, SLOT(enableLaneIdCmbSlot(bool)));
+    connect(this, SIGNAL(enableDetectorIdCmbSignal(bool)), road_branch_widget_, SLOT(enableDetectorIdCmbSlot(bool)));
     connect(send_msg_timer_, SIGNAL(timeout()), this, SLOT(sendMsgTimerTimeOutSlot()));
     connect(timer_, SIGNAL(timeout()), this, SLOT(timerTimeOutSlot()));
     connect(open_close_button_, SIGNAL(toggled(bool)), this, SLOT(openSerialTriggeredSlot(bool)));
@@ -603,6 +617,8 @@ void SimulatorWidget::initSignalSlots()
     connect(signaler_timer_, SIGNAL(timeout()), this, SLOT(signalerTimerTimeoutSlot()));
     connect(count_down_timer_, SIGNAL(timeout()), this, SLOT(countDownTimerTimeoutSlot()));
 
+    connect(this, SIGNAL(showLaneDetectorSignal(int,int,bool)), road_branch_widget_, SLOT(showDetectorSlot(int,int,bool)));
+
     // just for unit testing use
     connect(test_dlg_, SIGNAL(showChannelLightSignal(int,int)), road_branch_widget_, SLOT(laneIndexSlot(int,int)));
     connect(test_dlg_, SIGNAL(showLaneDetectorSignal(int,int,bool)), road_branch_widget_, SLOT(showDetectorSlot(int,int,bool)));
@@ -614,7 +630,8 @@ void SimulatorWidget::initComSettingLayout()
 {
     QLabel *timespan_label = new QLabel(STRING_UI_TIMESPAN + "(s):");
     timespan_spinbox_ = new QSpinBox;
-    timespan_spinbox_->setValue(1);
+    timespan_spinbox_->setRange(2, 65535);
+    timespan_spinbox_->setValue(2);
     start_button_ = new QPushButton(STRING_UI_START);
     start_button_->setCheckable(true);
     open_close_button_ = new QPushButton(STRING_UI_OPEN + STRING_UI_SERIALPORT);
@@ -1013,8 +1030,8 @@ void SimulatorWidget::packComData(int lane_index)
 {
     com_array_.clear();
     SerialData com_data;
-    QList<int> lane_id_list = road_branch_widget_->getLaneDetectorIdList();
-    curr_lane_id_ = lane_id_list.at(lane_index);
+    QList<int> detector_id_list = road_branch_widget_->getLaneDetectorIdList();
+    curr_lane_id_ = detector_id_list.at(lane_index);
     need_leave_ = false;
     if (curr_lane_id_ >= 1 && curr_lane_id_ <= 48)
     {
@@ -1029,18 +1046,18 @@ void SimulatorWidget::packComData(int lane_index)
     {
         com_data.type = 0x05 + '\0';
     }
-    com_data.lane_id = curr_lane_id_ + '\0';
+    com_data.detector_id = curr_lane_id_ + '\0';
     int secs = QDateTime::currentDateTime().toTime_t();
     memcpy(com_data.ms_time, &secs, 4);
 
     com_array_.append(com_data.head);
     com_array_.append(com_data.type);
-    com_array_.append(com_data.lane_id);
+    com_array_.append(com_data.detector_id);
     com_array_.append(com_data.ms_time,2);
     com_array_.append(com_data.tail);
 
-    qDebug() << "lane index:" << lane_index
-             << "lane id:" << curr_lane_id_ << endl;
+//    qDebug() << "lane index:" << lane_index
+//             << "lane id:" << curr_lane_id_ << endl;
 }
 
 void SimulatorWidget::initMyComSetting()
@@ -1146,6 +1163,22 @@ void SimulatorWidget::enableComSetting(bool enable)
     data_bit_cmb_->setEnabled(enable);
     stop_cmb_->setEnabled(enable);
     parity_cmb_->setEnabled(enable);
+}
+
+void SimulatorWidget::initPreDetectorColorList()
+{
+    for (int i = 0; i < 16; i++)
+    {
+        pre_detector_color_list_.append(RoadBranchWidget::Red);
+    }
+}
+
+void SimulatorWidget::initRedDetectorFlagList()
+{
+    for (int i = 0; i < 16; i++)
+    {
+        detector_red_flag_list_.append(0);
+    }
 }
 
 bool SimulatorWidget::checkPackage(QByteArray &array)
@@ -1440,7 +1473,11 @@ bool SimulatorWidget::parseLightRealTimeStatusContent(QByteArray &array)
     array.remove(0, idx+3);
     return true;
 }
-
+/* 处理流程：
+ * 1. 获取当前放行相位ID和当前相位所控制的通道
+ * 2. 检查当前系统中可通行通道上有无待放行的车辆：有则放行
+ * 3. 产生随机通道号并放行。
+*/
 void SimulatorWidget::simualtorComdataDispatcher()
 {
 #define COMDATA_GENERATOR(phase_id) \
@@ -1456,6 +1493,8 @@ void SimulatorWidget::simualtorComdataDispatcher()
     int lane_idx = qrand() % sz; \
     lane_idx = channel_id_list.at(lane_idx); \
     packComData(lane_idx);
+
+    qDebug() << "dispatching...";
 
     QString ctrl_mode = ctrl_mode_label_->text().trimmed();
     unsigned char phase_id = curr_phase_id_label_->text().toInt();
@@ -1533,6 +1572,56 @@ void SimulatorWidget::simualtorComdataDispatcher()
         emit showLaneDetectorSignal(lane_idx, RoadBranchWidget::Green, true);
         pre_lane_idx_ = lane_idx;
     }
+    else
+    {
+//        RAND_COMDATA_GENERATOR(phase_id)
+        qDebug() << "get phase ctrled channel";
+        QList<int> channel_id_list = road_branch_widget_->getLaneDetectorIdList();/*phase_handler_->get_phase_ctrl_ctrled_channel_list(phase_id); \*/
+        qDebug() << "calculate channel_id_list.size()";
+        int sz = channel_id_list.size(); \
+        if (sz <= 0) {return;} \
+        QTime t = QTime::currentTime(); \
+        qsrand(t.msec() + t.second()*1000); \
+        int lane_idx = qrand() % 12; \
+        qDebug() << "before pack com data (list_size:" << sz << "lane_idx:" << lane_idx << ")";
+        packComData(lane_idx);
+        qDebug() << "get_lane_index:" << lane_idx;
+        for (int i = 0; i < channel_id_list.size(); i++)
+        {
+            if (detector_red_flag_list_.at(i) == 1)
+            {
+                packComData(i);
+                // TODO: send signal
+                updateDetectorStatus(lane_idx);
+                detector_red_flag_list_[i] = 0;
+            }
+        }
+        updateDetectorStatus(lane_idx);
+    }
+}
+
+void SimulatorWidget::updateDetectorStatus(int detector_index)
+{
+    if (need_leave_)
+    {
+        detector_red_flag_list_[detector_index] = 1;
+    }
+    else
+    {
+        detector_red_flag_list_[detector_index] = 0;
+    }
+    my_com_->write(com_array_);
+    if (detector_red_flag_list_.at(pre_lane_idx_) == 0)
+    {
+        emit showLaneDetectorSignal(pre_lane_idx_, RoadBranchWidget::Green, false);
+    }
+    else
+    {
+        emit showLaneDetectorSignal(curr_lane_idx_, RoadBranchWidget::Red, false);
+    }
+    emit showLaneDetectorSignal(detector_index, RoadBranchWidget::Green, true);
+    pre_lane_idx_ = detector_index;
+    curr_lane_idx_ = detector_index;
 }
 
 QString SimulatorWidget::phaseBitsDesc(unsigned int phase_ids)
@@ -1558,7 +1647,7 @@ void SimulatorWidget::dumpComData()
     SerialData com_data;
 //    com_data.head = com_array_.at(0);
     com_data.type = com_array_.at(1);
-    com_data.lane_id = com_array_.at(2);
+    com_data.detector_id = com_array_.at(2);
     com_data.ms_time[0] = com_array_.at(3);
     com_data.ms_time[1] = com_array_.at(4);
 //    com_data.tail = com_array_.at(5);
@@ -1569,7 +1658,7 @@ void SimulatorWidget::dumpComData()
     QString tail = QString("0x%1").arg(int(com_data.tail),0,16);
     qDebug() << "head:" << head
              << "type:" << com_data.type - '\0'
-             << "lane_id:" << com_data.lane_id - '\0'
+             << "lane_id:" << com_data.detector_id - '\0'
              << "timespan:" << ts
              << "tail:" << tail
              << endl;
