@@ -155,6 +155,7 @@ private:
     bool trafficDispatch();
     bool isChannelAccessible(unsigned int phase_id, unsigned char channel_id);
     void randTraffic();
+    void initTrafficDispatcher();
 
     enum CarStatus
     {

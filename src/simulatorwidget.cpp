@@ -79,6 +79,7 @@ SimulatorWidget::SimulatorWidget(QWidget *parent) :
     initCtrlModeDesc();
     initPreDetectorColorList();
     initRedDetectorFlagList();
+    initTrafficDispatcher();
     setFixedSize(826+170,606);
     start_button_->setEnabled(false);
 }
@@ -1807,6 +1808,15 @@ void SimulatorWidget::randTraffic()
     qDebug() << "rand lane_idx:" << lane_idx;
     packComData(lane_idx);
     my_com_->write(com_array_);
+}
+
+void SimulatorWidget::initTrafficDispatcher()
+{
+    for (int i = 0; i < 16; i++)
+    {
+        car_sent_list_.append(None);
+        channel_detector_color_list_.append(Off);
+    }
 }
 
 void SimulatorWidget::dumpComData()
