@@ -134,16 +134,31 @@ void SimulatorWidget::startSimulatorToggledSlot(bool checked)
         start_button_->setChecked(!checked);
         return;
     }
+    if (checked && !conn_status_)
+    {
+        start_button_->setChecked(!checked);
+        QMessageBox::information(this, STRING_TIP, STRING_UI_START_WITHOUT_CONN, STRING_OK);
+        return;
+    }
+    int phase_id = curr_phase_id_label_->text().trimmed().toInt();
+    if (checked && phase_id == 0)
+    {
+        start_button_->setChecked(!checked);
+        QMessageBox::information(this, STRING_TIP, STRING_UI_PHASE_ID_INVALID, STRING_OK);
+        return;
+    }
     initMyComSetting();
     if (checked)
     {
         emit enableDetectorIdCmbSignal(false);
+        timespan_spinbox_->setEnabled(false);
         start_button_->setText(STRING_UI_STOP);
+        if (!trafficDispatch())
+        {
+            return;
+        }
         int secs = timespan_spinbox_->value();
         send_msg_timer_->start(secs*1000);
-
-        simualtorComdataDispatcher();
-
         if (need_leave_)
         {
             timer_->start(qrand() % 1000 + 1000);
@@ -157,7 +172,8 @@ void SimulatorWidget::startSimulatorToggledSlot(bool checked)
         timer_->stop();
         enableComSetting(true);
         emit enableDetectorIdCmbSignal(true);
-        road_branch_widget_->closeLightSlot();
+        timespan_spinbox_->setEnabled(true);
+//        road_branch_widget_->closeLightSlot();
     }
 }
 
@@ -176,21 +192,59 @@ void SimulatorWidget::sendMsgTimerTimeOutSlot()
 void SimulatorWidget::timerTimeOutSlot()
 {
     timer_->stop();
-    // com data send refresh
-    packComData(pre_lane_idx_);
-    need_leave_ = false;
+    unsigned int phase_id = curr_phase_id_label_->text().trimmed().toUInt();
+    QList<unsigned char> channel_id_list = phase_handler_->get_phase_ctrled_channel_list(phase_id);
+    for (int i = 0; i < car_sent_list_.size(); i++)
+    {
+        if (channel_id_list.contains(pre_lane_idx_list_.at(i)+1))
+        {
+            // TODO: send msg
+            packComData(pre_lane_idx_list_.at(i));
+            need_leave_ = false;
+            com_array_[1] = 0x02 + '\0';
+            char ms[4] = {'\0'};
+            int secs = QDateTime::currentDateTime().toTime_t();
+            memcpy(ms, &secs, sizeof(secs));
+            com_array_[3] = ms[0];
+            com_array_[4] = ms[1];
+            txt_edit_->insertPlainText(formatComData(com_array_)+"\n");
+            emit showLaneDetectorSignal(pre_lane_idx_list_.at(i), channel_detector_color_list_.at(i), false);
+            emit showLaneDetectorSignal(pre_lane_idx_list_.at(i), RoadBranchWidget::Red, true);
+            channel_detector_color_list_[i] = Off;
+            car_sent_list_[i] = None;
+            my_com_->write(com_array_);
+        }
+        else
+        {
+            return;
+        }
+    }
 
-    com_array_[1] = 0x02 + '\0';
-    char ms[4] = {'\0'};
-    int secs = QDateTime::currentDateTime().toTime_t();
-    memcpy(ms, &secs, sizeof(secs));
-    com_array_[3] = ms[0];
-    com_array_[4] = ms[1];
-    txt_edit_->insertPlainText(formatComData(com_array_)+"\n");
-    emit showLaneDetectorSignal(curr_lane_idx_, RoadBranchWidget::Green, false);
-    emit showLaneDetectorSignal(curr_lane_idx_, RoadBranchWidget::Red, true);
-    detector_red_flag_list_[curr_lane_idx_] = 0;
-    int sz = my_com_->write(com_array_);
+    /*
+    timer_->stop();
+    unsigned int phase_id = curr_phase_id_label_->text().trimmed().toInt();
+    QList<unsigned char> channel_id_list = phase_handler_->get_phase_ctrled_channel_list(phase_id);
+    if (channel_id_list.contains(pre_lane_idx_+1))
+    {
+        // TODO: send msg
+        packComData(pre_lane_idx_);
+        need_leave_ = false;
+        com_array_[1] = 0x02 + '\0';
+        char ms[4] = {'\0'};
+        int secs = QDateTime::currentDateTime().toTime_t();
+        memcpy(ms, &secs, sizeof(secs));
+        com_array_[3] = ms[0];
+        com_array_[4] = ms[1];
+        txt_edit_->insertPlainText(formatComData(com_array_)+"\n");
+        emit showLaneDetectorSignal(curr_lane_idx_, RoadBranchWidget::Green, false);
+        emit showLaneDetectorSignal(curr_lane_idx_, RoadBranchWidget::Red, true);
+        detector_red_flag_list_[curr_lane_idx_] = 0;
+        my_com_->write(com_array_);
+    }
+    else
+    {
+        return;
+    }*/
 }
 
 void SimulatorWidget::openSerialTriggeredSlot(bool checked)
@@ -253,6 +307,7 @@ void SimulatorWidget::connectButtonClicked()
             killTimer(ver_check_id_);
             ver_check_id_ = 0;
         }
+        start_button_->setChecked(false);
     }
     else
     {
@@ -261,7 +316,16 @@ void SimulatorWidget::connectButtonClicked()
         conn_button_->setEnabled(false);
         conn_tip_label_->setText(STRING_UI_CONNECT + "...");
     }
+
+    clear_status_button_->setEnabled(conn_button_->text() != STRING_UI_CONNECT);
+
 #endif
+}
+
+void SimulatorWidget::clearButtonClicked()
+{
+    // TODO: clear traffic light status
+    road_branch_widget_->closeLightSlot();
 }
 
 void SimulatorWidget::connectEstablishedSlot()
@@ -271,7 +335,7 @@ void SimulatorWidget::connectEstablishedSlot()
     conn_button_->setText(STRING_UI_DISCONNECT);
     conn_timer_->stop();
     sync_cmd_->ReadTscVersion(this, SLOT(onCmdGetVerIdSlot(QByteArray&)));
-    conn_tip_label_->setText("version checking...");
+    conn_tip_label_->setText(STRING_NETWORK_VERSION_CHECK);
     if (ver_check_id_ == 0)
     {
         ver_check_id_ = startTimer(VERSION_CHECK_MS);
@@ -281,7 +345,7 @@ void SimulatorWidget::connectEstablishedSlot()
 void SimulatorWidget::disconnectedSlot()
 {
     conn_status_ = false;
-    conn_tip_label_->setText("disconnected");
+    conn_tip_label_->setText(STRING_NETWORK_DISCONNECTED);
     conn_button_->setText(STRING_UI_CONNECT);
 }
 
@@ -296,13 +360,13 @@ void SimulatorWidget::onCmdGetVerIdSlot(QByteArray &array)
     memcpy(ver, array.data(), 11);
     if (strcmp(ver, "CYT0V100END") != 0)
     {
-        conn_tip_label_->setText("version error");
+        conn_tip_label_->setText(STRING_NETWORK_VERSION_ERROR);
         return;
     }
 
     killTimer(ver_check_id_);
     ver_check_id_ = 0;
-    conn_tip_label_->setText("version right");
+    conn_tip_label_->setText(STRING_NETWORK_VERSION_RIGHT);
 //    sync_cmb_->ReleaseSignalSlots();
     cfg_array_.clear();
     recv_array_.clear();
@@ -327,7 +391,7 @@ void SimulatorWidget::onCmdReadConfigFileSlot(QByteArray &array)
     int ret = -1;
     if (!res)
     {
-        ret = QMessageBox::question(this, STRING_TIP, "Read config file failed, retry?", "yes", "no");
+        ret = QMessageBox::question(this, STRING_TIP, STRING_NETWORK_CONFIG_RETRY, STRING_YES, STRING_NO);
         if (ret == 0)
         {
             cfg_array_.clear();
@@ -349,7 +413,7 @@ void SimulatorWidget::onCmdReadConfigFileSlot(QByteArray &array)
         QFile file(cfg_file_);
 retry:  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
         {
-            ret = QMessageBox::question(this, STRING_TIP, "save temp config file failed, retry ?", "yes", "no");
+            ret = QMessageBox::question(this, STRING_TIP, STRING_NETWORK_CFG_TEMP_SAVE, STRING_YES, STRING_NO);
             if (ret == 0)
             {
                 goto retry;
@@ -406,7 +470,7 @@ void SimulatorWidget::onCmdParseParam(QByteArray &array)
             status = parseBeginMonitorContent(recv_array_);
             if (!status)
             {
-                QMessageBox::information(this, STRING_TIP, "Parse CYT1 failed", STRING_OK);
+                QMessageBox::information(this, STRING_TIP, STRING_NETWORK_PARSE_ERROR + "(CYT1)", STRING_OK);
             }
             break;
         case '2':
@@ -415,7 +479,7 @@ void SimulatorWidget::onCmdParseParam(QByteArray &array)
             status = parseLightStatusContent(recv_array_);
             if (!status)
             {
-                QMessageBox::information(this, STRING_TIP, "Parse Light status failed.", STRING_OK);
+                QMessageBox::information(this, STRING_TIP, STRING_NETWORK_PARSE_ERROR + "(CYT3)", STRING_OK);
             }
             else if (is_first_)
             {
@@ -443,7 +507,7 @@ void SimulatorWidget::onCmdParseParam(QByteArray &array)
             status = parseCountDownContent(recv_array_);
             if (!status)
             {
-                QMessageBox::information(this, STRING_OK, "Parse count down info failed.", STRING_OK);
+                QMessageBox::information(this, STRING_OK, STRING_NETWORK_PARSE_ERROR + "(CYT5)", STRING_OK);
             }
             break;
         case '6':
@@ -456,6 +520,10 @@ void SimulatorWidget::onCmdParseParam(QByteArray &array)
             }
             else/* if (!is_inited_)*/
             {
+                if (initTscParam())
+                {
+                    updateScheduleInfo();
+                }
                 signaler_timer_->start(1000);
                 sync_cmd_->StartMonitoring();
                 is_inited_ = true;
@@ -485,7 +553,7 @@ void SimulatorWidget::onCmdParseParam(QByteArray &array)
             status = parseAllLightOnContent(recv_array_);
             if (!status)
             {
-                QMessageBox::information(this, STRING_TIP, "Parse all light red or green failed.", STRING_OK);
+                QMessageBox::information(this, STRING_TIP, STRING_NETWORK_PARSE_ERROR + "(CYTF)", STRING_OK);
             }
             break;
         default:
@@ -500,7 +568,7 @@ void SimulatorWidget::connTimerTimeoutSlot()
     if (sync_cmd_->isConnectionValid())
     {
         sync_cmd_->closeConnection();
-        conn_tip_label_->setText("can not arrive host address");
+        conn_tip_label_->setText(STRING_NETWORK_HOST_UNREACHABLE);
         conn_button_->setEnabled(true);
     }
 }
@@ -539,8 +607,8 @@ void SimulatorWidget::countDownTimerTimeoutSlot()
         FORMAT_COUNT_DOWN("%02d-00-00", count_down_secs_)
         break;
     case Off:
-        break;
     default:
+        str = "00-00-00";
         break;
     }
     count_down_lcd_->display(str);
@@ -556,8 +624,22 @@ void SimulatorWidget::closeEvent(QCloseEvent *)
     {
         send_msg_timer_->stop();
     }
-    sync_cmd_->StopMonitoring();
+    if (ver_check_id_ == 0)
+    {
+        sync_cmd_->StopMonitoring();
+    }
+    else
+    {
+        killTimer(ver_check_id_);
+        ver_check_id_ = 0;
+    }
     sync_cmd_->disconnectFromHost();
+    XmlHelper *helper = XmlHelper::GetInstance();
+    ip_ = MUtility::trimmedAll(ip_lineedit_->text());
+    QString str = port_lineedit_->text().trimmed();
+    helper->SetXmlNodeContent("ip", ip_);
+    helper->SetXmlNodeContent("port", str);
+    helper->DestroyInstance();
 }
 
 void SimulatorWidget::timerEvent(QTimerEvent *)
@@ -577,6 +659,8 @@ void SimulatorWidget::initPage()
     initComSettingLayout();
     initRoadbranchLayout();
     initScheduleInfoLayout();
+
+    clear_status_button_->setEnabled(conn_button_->text() != STRING_UI_CONNECT);
 
     QHBoxLayout *hlayout = new QHBoxLayout;
     hlayout->addWidget(com_setting_grp_);
@@ -607,6 +691,7 @@ void SimulatorWidget::initSignalSlots()
 
     connect(detector_cfg_button_, SIGNAL(clicked()), this, SLOT(detectorEditButtonClicked()));
     connect(conn_button_, SIGNAL(clicked()), this, SLOT(connectButtonClicked()));
+    connect(clear_status_button_, SIGNAL(clicked()), this, SLOT(clearButtonClicked()));
 
     connect(sync_cmd_, SIGNAL(connectedSignal()), this, SLOT(connectEstablishedSlot()));
 //    connect(sync_cmd_, SIGNAL(connectErrorStrSignal(QString)), this, SLOT(connectErrorSlot(QString)));
@@ -780,6 +865,7 @@ void SimulatorWidget::initScheduleInfoLayout()
     signaler_time_label_ = new QLabel;
     count_down_lcd_ = new QLCDNumber;
     conn_button_ = new QPushButton(STRING_UI_CONNECT);
+    clear_status_button_ = new QPushButton(STRING_UI_CLEAR_STATUS);
     detector_cfg_button_ = new QPushButton(STRING_UI_DETECTOR_EDIT);
     count_down_lcd_->setDigitCount(8);
     count_down_lcd_->setMinimumSize(QSize(0,32));
@@ -810,15 +896,18 @@ void SimulatorWidget::initScheduleInfoLayout()
     QGridLayout *network_glayout = new QGridLayout;
     ip_lineedit_ = new QLineEdit;
     ip_lineedit_->setInputMask("000.000.000.000");
+    ip_lineedit_->setMinimumWidth(95);
     port_lineedit_ = new QLineEdit;
+    port_lineedit_->setMinimumWidth(95);
     port_lineedit_->setValidator(new QIntValidator(0, 65535, port_lineedit_));
     conn_tip_label_ = new QLabel;
     network_glayout->addWidget(new QLabel(STRING_UI_IP + ":"), 0, 0, 1, 1);
     network_glayout->addWidget(new QLabel(STRING_UI_PORT + ":"), 1, 0, 1, 1);
-    network_glayout->addWidget(ip_lineedit_, 0, 1, 1, 1);
-    network_glayout->addWidget(port_lineedit_, 1, 1, 1, 1);
-    network_glayout->addWidget(conn_button_, 2, 0, 1, 2, Qt::AlignCenter);
-    network_glayout->addWidget(conn_tip_label_, 3, 0, 1, 2, Qt::AlignCenter);
+    network_glayout->addWidget(ip_lineedit_, 0, 1, 1, 3);
+    network_glayout->addWidget(port_lineedit_, 1, 1, 1, 3);
+    network_glayout->addWidget(conn_button_, 2, 0, 1, 1);
+    network_glayout->addWidget(clear_status_button_, 2, 3, 1, 1);
+    network_glayout->addWidget(conn_tip_label_, 3, 0, 1, 1);
 
     QGroupBox *network_grp = new QGroupBox;
     network_grp->setLayout(network_glayout);
@@ -830,7 +919,7 @@ void SimulatorWidget::initScheduleInfoLayout()
     all_vlayout->setStretch(1, 1);
     schedule_grp_ = new QGroupBox;
     schedule_grp_->setLayout(all_vlayout);
-    schedule_grp_->setMaximumWidth(190);
+    schedule_grp_->setMaximumWidth(200);
 }
 
 void SimulatorWidget::initCtrlModeDesc()
@@ -912,6 +1001,7 @@ void SimulatorWidget::updateScheduleInfo()
     QString str;
     int n = 0;
     unsigned char pattern_id = 0;
+    ctrl_mode_label_->setText(" -");
     for (m = 0; m < tsc_param_.time_section_table_.FactTimeSectionNum; m++)
     {
         if (tsc_param_.time_section_table_.TimeSectionList[m][0].TimeSectionId != time_section_id)
@@ -941,8 +1031,8 @@ void SimulatorWidget::updateScheduleInfo()
                     event_id_label_->setText(str.sprintf("%d", event_id));
                     str.sprintf("%02d:%02d", start_hour, start_min);
                     start_time_label_->setText(str);
-                    str = ctrl_mode_desc_map_.value(ctrl_mode); //EventLogDescriptor::GetInstance()->get_ctrl_mode_desc(ctrl_mode);
-                    ctrl_mode_label_->setText(str);
+//                    str = ctrl_mode_desc_map_.value(ctrl_mode); //EventLogDescriptor::GetInstance()->get_ctrl_mode_desc(ctrl_mode);
+//                    ctrl_mode_label_->setText(str);
                     pattern_id = tsc_param_.time_section_table_.TimeSectionList[m][n-1].PatternId;
                 }
                 break;
@@ -1313,6 +1403,8 @@ bool SimulatorWidget::parseLightStatusContent(QByteArray &array)
     {
         emit showLightSignal(i+1, channel_status_info_.channel_vec.at(i));
     }
+    QString txt = ctrl_mode_desc_map_.value(channel_status_info_.work_mode);
+    ctrl_mode_label_->setText(txt);
 
     // back up channel status info
     channel_status_bak_ = channel_status_info_;
@@ -1374,7 +1466,6 @@ bool SimulatorWidget::parseCountDownContent(QByteArray &array)
     default:
         break;
     }
-
     return true;
 }
 
@@ -1399,7 +1490,7 @@ bool SimulatorWidget::parseTSCTimeContent(QByteArray &array)
     }
     date_time_ = QDateTime::fromTime_t(seconds).toLocalTime();
     QString str = date_time_.toString("yyyy-MM-dd hh:mm:ss");
-    SIGNALER_TIME_UPDATE(str)
+    SIGNALER_TIME_UPDATE(str);
 
     return true;
 }
@@ -1478,45 +1569,21 @@ bool SimulatorWidget::parseLightRealTimeStatusContent(QByteArray &array)
  * 2. 检查当前系统中可通行通道上有无待放行的车辆：有则放行
  * 3. 产生随机通道号并放行。
 */
-void SimulatorWidget::simualtorComdataDispatcher()
+bool SimulatorWidget::simualtorComdataDispatcher()
 {
-#define COMDATA_GENERATOR(phase_id) \
-    int lane_idx = phase_id_list_.indexOf(phase_id); \
-    packComData(lane_idx);
-
-
-#define RAND_COMDATA_GENERATOR(sz) \
-    QList<unsigned char> channel_id_list = phase_handler_->get_phase_ctrl_ctrled_channel_list(phase_id); \
-    int sz = channel_id_list.size(); \
-    QTime t = QTime::currentTime(); \
-    qsrand(t.msec() + t.second()*1000); \
-    int lane_idx = qrand() % sz; \
-    lane_idx = channel_id_list.at(lane_idx); \
-    packComData(lane_idx);
-
-    qDebug() << "dispatching...";
-
     QString ctrl_mode = ctrl_mode_label_->text().trimmed();
     unsigned char phase_id = curr_phase_id_label_->text().toInt();
     unsigned char phase_type = getPhaseType(phase_id);
     if (ctrl_mode == STRING_CTRL_FULL_INDUCTION)
     {
-        RAND_COMDATA_GENERATOR(phase_id)
-        my_com_->write(com_array_);
-        emit showLaneDetectorSignal(pre_lane_idx_, RoadBranchWidget::Green, false);
-        emit showLaneDetectorSignal(lane_idx, RoadBranchWidget::Green, true);
-        pre_lane_idx_ = lane_idx;
+        comDataDispatch(phase_id);
     }
     else if (ctrl_mode == STRING_CTRL_MAIN_HALF_INDUCTION)
     {
         if (phase_type == 0x020)        // elasticity phase
         {
             // send com msg
-            RAND_COMDATA_GENERATOR(phase_id);
-            my_com_->write(com_array_);
-            emit showLaneDetectorSignal(pre_lane_idx_, RoadBranchWidget::Green, false);
-            emit showLaneDetectorSignal(lane_idx, RoadBranchWidget::Green, true);
-            pre_lane_idx_ = lane_idx;
+            comDataDispatch(phase_id);
         }
         else if (phase_type == 0x080)   // fix phase
         {
@@ -1534,10 +1601,7 @@ void SimulatorWidget::simualtorComdataDispatcher()
         else if (phase_type == 0x040)   // determined phase
         {
             // TODO: send com msg
-            RAND_COMDATA_GENERATOR(phase_id);
-            emit showLaneDetectorSignal(pre_lane_idx_, RoadBranchWidget::Green, false);
-            emit showLaneDetectorSignal(lane_idx, RoadBranchWidget::Green, true);
-            pre_lane_idx_ = lane_idx;
+            comDataDispatch(phase_id);
         }
     }
     else if (ctrl_mode == STRING_CTRL_CROSS_STREET)
@@ -1550,54 +1614,51 @@ void SimulatorWidget::simualtorComdataDispatcher()
         else if (phase_type == 0x04)    // walkman phase
         {
             // TODO: send com msg
-            RAND_COMDATA_GENERATOR(phase_id);
-            emit showLaneDetectorSignal(pre_lane_idx_, RoadBranchWidget::Green, false);
-            emit showLaneDetectorSignal(lane_idx, RoadBranchWidget::Green, true);
-            pre_lane_idx_ = lane_idx;
+            comDataDispatch(phase_id);
         }
     }
     else if (ctrl_mode == STRING_CTRL_BUS_FIRST)
     {
         // TODO: send com msg
-        RAND_COMDATA_GENERATOR(phase_id);
-        emit showLaneDetectorSignal(pre_lane_idx_, RoadBranchWidget::Green, false);
-        emit showLaneDetectorSignal(lane_idx, RoadBranchWidget::Green, true);
-        pre_lane_idx_ = lane_idx;
+        comDataDispatch(phase_id);
     }
     else if (ctrl_mode == STRING_CTRL_SINGLE_ADAPT)
     {
         // TODO: send com msg
-        RAND_COMDATA_GENERATOR(phase_id);
-        emit showLaneDetectorSignal(pre_lane_idx_, RoadBranchWidget::Green, false);
-        emit showLaneDetectorSignal(lane_idx, RoadBranchWidget::Green, true);
-        pre_lane_idx_ = lane_idx;
+        comDataDispatch(phase_id);
     }
     else
     {
-//        RAND_COMDATA_GENERATOR(phase_id)
-        qDebug() << "get phase ctrled channel";
-        QList<int> channel_id_list = road_branch_widget_->getLaneDetectorIdList();/*phase_handler_->get_phase_ctrl_ctrled_channel_list(phase_id); \*/
-        qDebug() << "calculate channel_id_list.size()";
-        int sz = channel_id_list.size(); \
-        if (sz <= 0) {return;} \
-        QTime t = QTime::currentTime(); \
-        qsrand(t.msec() + t.second()*1000); \
-        int lane_idx = qrand() % 12; \
-        qDebug() << "before pack com data (list_size:" << sz << "lane_idx:" << lane_idx << ")";
-        packComData(lane_idx);
-        qDebug() << "get_lane_index:" << lane_idx;
-        for (int i = 0; i < channel_id_list.size(); i++)
-        {
-            if (detector_red_flag_list_.at(i) == 1)
-            {
-                packComData(i);
-                // TODO: send signal
-                updateDetectorStatus(lane_idx);
-                detector_red_flag_list_[i] = 0;
-            }
-        }
-        updateDetectorStatus(lane_idx);
+        comDataDispatch(phase_id);
     }
+    return true;
+}
+
+void SimulatorWidget::comDataDispatch(int phase_id)
+{
+    QList<unsigned char> channel_id_list = phase_handler_->get_phase_ctrled_channel_list(phase_id);/* road_branch_widget_->getLaneDetectorIdList();*/
+    int sz = channel_id_list.size();
+    if (sz <= 0) {return;}
+    QTime t = QTime::currentTime();
+    qsrand(t.msec() + t.second()*1000);
+    int lane_idx = qrand() % 12;
+    if (!channel_id_list.contains(lane_idx+1))
+    {
+        return;
+    }
+    qDebug() << "before pack com data (list_size:" << sz << "lane_idx:" << lane_idx << ")";
+    packComData(lane_idx);
+    qDebug() << "get_lane_index:" << lane_idx;
+    for (int i = 0; i < channel_id_list.size(); i++)
+    {
+        if (detector_red_flag_list_.at(i) == 1)
+        {
+            packComData(i);
+            updateDetectorStatus(lane_idx);
+            detector_red_flag_list_[i] = 0;
+        }
+    }
+    updateDetectorStatus(lane_idx);
 }
 
 void SimulatorWidget::updateDetectorStatus(int detector_index)
@@ -1642,15 +1703,119 @@ QString SimulatorWidget::phaseBitsDesc(unsigned int phase_ids)
     return str.left(str.size() - 1);
 }
 
+bool SimulatorWidget::trafficDispatch()
+{
+    unsigned int phase_id = curr_phase_id_label_->text().trimmed().toUInt();
+    for (int i = 0; i < car_sent_list_.size(); i++)
+    {
+        switch (car_sent_list_.at(i))
+        {
+        case Come:
+            if (isChannelAccessible(phase_id, i+1))
+            {
+                // TODO: dispatch car
+                emit showLaneDetectorSignal(pre_lane_idx_list_.at(i), channel_detector_color_list_.at(i), false);
+                emit showLaneDetectorSignal(i, RoadBranchWidget::Green, true);
+                channel_detector_color_list_[i] = Green;
+                car_sent_list_[i] = Go;
+                pre_lane_idx_list_[i] = i;
+            }
+            break;
+        case Go:
+            if (isChannelAccessible(phase_id, i+1))
+            {
+                // TODO: dispatch car
+                emit showLaneDetectorSignal(pre_lane_idx_list_.at(i), channel_detector_color_list_.at(i), false);
+                emit showLaneDetectorSignal(i, RoadBranchWidget::Green, true);
+                channel_detector_color_list_[i] = Off;
+                car_sent_list_[i] = None;
+                pre_lane_idx_list_[i] = i;
+            }
+            break;
+        case None:
+            break;
+        default:
+            break;
+        }
+    }
+    // generate rand lane index
+    QTime t = QTime::currentTime();
+    qsrand(t.msec() + t.second()*1000);
+    int lane_idx = qrand() % 12;
+    qDebug() << "rand lane_idx:" << lane_idx;
+    if (car_sent_list_.at(lane_idx) == Come)
+    {
+        return false;
+    }
+    car_sent_list_[lane_idx] = Come;
+    packComData(lane_idx);
+    my_com_->write(com_array_);
+    switch (car_sent_list_.at(lane_idx))
+    {
+    case Come:
+        if (isChannelAccessible(phase_id, lane_idx+1))
+        {
+            emit showLaneDetectorSignal(pre_lane_idx_list_.at(lane_idx), channel_detector_color_list_.at(lane_idx), false);
+            emit showLaneDetectorSignal(lane_idx, RoadBranchWidget::Green, true);
+            channel_detector_color_list_[lane_idx] = Green;
+            car_sent_list_[lane_idx] = Go;
+            pre_lane_idx_list_[lane_idx] = lane_idx;
+            timer_->start(qrand()%1000+1000);
+        }
+        break;
+    case Go:
+//        if (isChannelAccessible(phase_id, lane_idx+1))
+//        {
+//            // TODO: dispatch car
+//            ;
+//            car_sent_list_[lane_idx] = None;
+//        }
+        break;
+    case None:
+//        if (isChannelAccessible(phase_id, lane_idx+1))
+//        {
+//            // TODO: dispatch car
+//            ;
+//            car_sent_list_[lane_idx] = Come;
+//        }
+        break;
+    default:
+        break;
+    }
+    return true;
+}
+
+bool SimulatorWidget::isChannelAccessible(unsigned int phase_id, unsigned char channel_id)
+{
+    QList<unsigned char> channel_id_list = phase_handler_->get_phase_ctrled_channel_list(phase_id);
+    if (channel_id_list.isEmpty())
+    {
+        return false;
+    }
+    if (!channel_id_list.contains(channel_id))
+    {
+        return false;
+    }
+    return true;
+}
+
+void SimulatorWidget::randTraffic()
+{
+    QTime t = QTime::currentTime();
+    qsrand(t.msec() + t.second()*1000);
+    int lane_idx = qrand() % 12;
+    qDebug() << "rand lane_idx:" << lane_idx;
+    packComData(lane_idx);
+    my_com_->write(com_array_);
+}
+
 void SimulatorWidget::dumpComData()
 {
     SerialData com_data;
-//    com_data.head = com_array_.at(0);
     com_data.type = com_array_.at(1);
     com_data.detector_id = com_array_.at(2);
     com_data.ms_time[0] = com_array_.at(3);
     com_data.ms_time[1] = com_array_.at(4);
-//    com_data.tail = com_array_.at(5);
 
     int ts = 0;
     memcpy(&ts, com_data.ms_time,4);

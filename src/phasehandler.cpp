@@ -179,10 +179,10 @@ QString PhaseHandler::get_phase_ctrled_channels_desc( unsigned int channel_ids )
     return str.left(str.size() - 1);
 }
 
-QList<unsigned char> PhaseHandler::get_phase_ctrl_ctrled_channel_list(unsigned char phase_id)
+QList<unsigned char> PhaseHandler::get_phase_ctrled_channel_list(unsigned char phase_id)
 {
     QList<unsigned char> channel_id_list;
-#if 0
+#if 1
     PhaseParam phase;
     if (!get_phase(phase_id, phase))
     {
@@ -198,7 +198,7 @@ QList<unsigned char> PhaseHandler::get_phase_ctrl_ctrled_channel_list(unsigned c
         channel_ids = channel_ids >> 1;
     }
 #endif
-#if 1
+#if 0
     channel_id_list << 1 << 2 << 3 << 4 << 5 << 6 << 7 << 8 << 9 << 10 << 11 << 12 << 13 << 14 << 15 << 16;
 #endif
     return channel_id_list;

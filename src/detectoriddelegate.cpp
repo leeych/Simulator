@@ -100,5 +100,6 @@ void DetectorIdDelegate::setModelData(QWidget *editor, QAbstractItemModel *model
 
 void DetectorIdDelegate::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
+    Q_UNUSED(index);
     editor->setGeometry(option.rect);
 }

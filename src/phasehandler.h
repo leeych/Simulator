@@ -30,7 +30,7 @@ public:
     QList<unsigned char> get_phase_id_list();
 	unsigned char get_phase_channel_id(unsigned char phase_id);
 	QString get_phase_ctrled_channels_desc(unsigned int channel_ids);
-    QList<unsigned char> get_phase_ctrl_ctrled_channel_list(unsigned char phase_id);
+    QList<unsigned char> get_phase_ctrled_channel_list(unsigned char phase_id);
 //    unsigned char get_phase_type_by_desc(const QString &desc);
 //    QString get_phase_type_desc(unsigned char phase_type);
 

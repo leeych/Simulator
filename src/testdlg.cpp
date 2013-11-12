@@ -107,7 +107,7 @@ void TestDlg::OnGenDataButtonClicked()
         QFile file(dir + QString::number(i) + postfix);
         file.open(QIODevice::ReadOnly);
         QByteArray data_arr = file.readAll();
-        int head_idx = data_arr.indexOf("CYT");
+        data_arr.indexOf("CYT");
         int tail_idx = data_arr.indexOf("END");
         QByteArray first_line = data_arr.left(tail_idx+3);
         file_w.write(first_line);

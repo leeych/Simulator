@@ -8,6 +8,8 @@
 #define STRING_CANCEL           QObject::tr("Cancel")
 #define STRING_INVALID          QObject::tr("Invalid")
 #define STRING_FAILED           QObject::tr("failed")
+#define STRING_YES              QObject::tr("Yes")
+#define STRING_NO               QObject::tr("No")
 
 #define STRING_UI_WINDOW_TITLE  QObject::tr("Vehicle detector simulator")
 #define STRING_UI_EXISTS        QObject::tr("Already exists")
@@ -46,6 +48,7 @@
 #define STRING_UI_CONNECT           QObject::tr("Connect")
 #define STRING_UI_DISCONNECT        QObject::tr("Disconnect")
 #define STRING_UI_DETECTOR_EDIT     QObject::tr("Edit detector id")
+#define STRING_UI_CLEAR_STATUS      QObject::tr("Clear traffic status")
 #define STRING_UI_DETECTOR_ID_EDIT_TITLE    QObject::tr("Detector id edit window")
 
 #define STRING_UI_EAST              QObject::tr("East")
@@ -56,6 +59,8 @@
 //#define STRING_UI_LANE              QObject::tr("Lane")
 #define STRING_UI_SIDEWALK          QObject::tr("Sidewalk")
 #define STRING_UI_IP                QObject::tr("IP")
+#define STRING_UI_START_WITHOUT_CONN    QObject::tr("Can not start without connecting")
+#define STRING_UI_PHASE_ID_INVALID      QObject::tr("Can not start with invalid phase id")
 
 // SyncCommand
 #define STRING_CONNECT_HOST_REFUSED     QObject::tr("Connected host refused")
@@ -95,6 +100,16 @@
 #define STRING_CTRL_TRAFFIC_CTRL        QObject::tr("Traffic control")
 #define STRING_CTRL_MANUAL_CTRL         QObject::tr("Manual control")
 #define STRING_CTRL_SYS_FAULT_YELLOW    QObject::tr("System fault cause to yellow flash")
+
+#define STRING_NETWORK_VERSION_CHECK        QObject::tr("Version checking...")
+#define STRING_NETWORK_DISCONNECTED         QObject::tr("Disconnected")
+#define STRING_NETWORK_VERSION_ERROR        QObject::tr("Version error")
+#define STRING_NETWORK_VERSION_RIGHT        QObject::tr("Version corrected")
+#define STRING_NETWORK_CONFIG_RETRY         QObject::tr("Read config file failed. Retry?")
+#define STRING_NETWORK_CFG_TEMP_SAVE        QObject::tr("Save config temp file failed. Retry?")
+#define STRING_NETWORK_PARSE_ERROR          QObject::tr("Parse network package error")
+#define STRING_NETWORK_HOST_UNREACHABLE     QObject::tr("Host unreachable")
+
 
 
 #endif // MACROSTRINGS_H

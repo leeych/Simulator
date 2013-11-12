@@ -94,6 +94,7 @@ public slots:
 
     void detectorEditButtonClicked();
     void connectButtonClicked();
+    void clearButtonClicked();
 
     void connectEstablishedSlot();
     void disconnectedSlot();
@@ -145,9 +146,23 @@ private:
     bool parseDriverRealtimeStatusContent(QByteArray &array);
     bool parseLightRealTimeStatusContent(QByteArray &array);
 
-    void simualtorComdataDispatcher();
+    bool simualtorComdataDispatcher();
+    void comDataDispatch(int phase_id);
     void updateDetectorStatus(int detector_index);
     QString phaseBitsDesc(unsigned int phase_ids);
+
+    // dispatch car
+    bool trafficDispatch();
+    bool isChannelAccessible(unsigned int phase_id, unsigned char channel_id);
+    void randTraffic();
+
+    enum CarStatus
+    {
+        Come = 0, Go = 1, None = 2
+    };
+    QList<CarStatus> car_sent_list_;    // index+1 present channel_id
+    QList<LightColor> channel_detector_color_list_; // index+1 present channel id
+
     void dumpComData();
     void test();
 
@@ -208,6 +223,7 @@ private:
     QList<int> phase_id_list_;
     int pre_lane_idx_;
     QList<RoadBranchWidget::LightColor> pre_detector_color_list_;
+    QList<int> pre_lane_idx_list_;
     QList<int> detector_red_flag_list_;
 
     MDatabase *db_ptr_;
@@ -230,7 +246,7 @@ private:
     QLabel *sched_id_label_, *event_id_label_, *start_time_label_, *cycle_time_label_;
     QLabel *ctrl_mode_label_, *stage_id_label_, *curr_phase_id_label_, *signaler_time_label_;
     QLCDNumber *count_down_lcd_;
-    QPushButton *conn_button_;
+    QPushButton *conn_button_, *clear_status_button_;
     QPushButton *detector_cfg_button_;
 
     DetectorIdEditWidget *detector_edit_dlg_;

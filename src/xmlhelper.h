@@ -39,6 +39,8 @@ public:
     bool ClearXmlDocument();
     bool AddRootNode(const QString &root_node);
 
+    void DestroyInstance();
+
 private:
     XmlHelper() {}
     bool LoadXmlFile();

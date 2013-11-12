@@ -505,6 +505,15 @@ bool XmlHelper::AddRootNode(const QString &root_node)
     return true;
 }
 
+void XmlHelper::DestroyInstance()
+{
+    if (helper_ != NULL)
+    {
+        delete helper_;
+        helper_ = NULL;
+    }
+}
+
 bool XmlHelper::LoadXmlFile()
 {
     doc_.clear();
