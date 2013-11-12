@@ -30,7 +30,7 @@
 #define VERSION_CHECK_MS    5000
 
 #define SIGNALER_TIME_UPDATE(str) \
-    signaler_time_label_->setText("<font size=4>" + str + "</font>");
+    signaler_time_label_->setText("<font size=5>" + str + "</font>");
 
 SimulatorWidget::SimulatorWidget(QWidget *parent) :
     QWidget(parent)
@@ -72,6 +72,7 @@ SimulatorWidget::SimulatorWidget(QWidget *parent) :
 
     is_first_ = true;
     is_first_send_ = true;
+    is_first_end_ = true;
 
     setWindowTitle(STRING_UI_WINDOW_TITLE);
     initPage();
@@ -154,7 +155,7 @@ void SimulatorWidget::startSimulatorToggledSlot(bool checked)
         emit enableDetectorIdCmbSignal(false);
         timespan_spinbox_->setEnabled(false);
         start_button_->setText(STRING_UI_STOP);
-        if (!trafficDispatch())
+        if (!simualtorComdataDispatcher())
         {
             return;
         }
@@ -197,7 +198,7 @@ void SimulatorWidget::timerTimeOutSlot()
     QList<unsigned char> channel_id_list = phase_handler_->get_phase_ctrled_channel_list(phase_id);
     for (int i = 0; i < car_sent_list_.size(); i++)
     {
-        if (channel_id_list.contains(pre_lane_idx_list_.at(i)+1))
+        if (channel_id_list.contains(pre_lane_idx_list_.at(i)+1) && car_sent_list_.at(i) == Go)
         {
             // TODO: send msg
             packComData(pre_lane_idx_list_.at(i));
@@ -301,7 +302,11 @@ void SimulatorWidget::connectButtonClicked()
     conn_tip_label_->clear();
     if (conn_status_)
     {
-        sync_cmd_->StopMonitoring();
+        if (ver_check_id_ == 0 && is_first_end_)
+        {
+            sync_cmd_->StopMonitoring();
+            is_first_end_ = false;
+        }
         sync_cmd_->disconnectFromHost();
         if (ver_check_id_ != 0)
         {
@@ -1577,14 +1582,14 @@ bool SimulatorWidget::simualtorComdataDispatcher()
     unsigned char phase_type = getPhaseType(phase_id);
     if (ctrl_mode == STRING_CTRL_FULL_INDUCTION)
     {
-        comDataDispatch(phase_id);
+        return trafficDispatch(phase_id);
     }
     else if (ctrl_mode == STRING_CTRL_MAIN_HALF_INDUCTION)
     {
         if (phase_type == 0x020)        // elasticity phase
         {
             // send com msg
-            comDataDispatch(phase_id);
+            return trafficDispatch(phase_id);
         }
         else if (phase_type == 0x080)   // fix phase
         {
@@ -1602,7 +1607,7 @@ bool SimulatorWidget::simualtorComdataDispatcher()
         else if (phase_type == 0x040)   // determined phase
         {
             // TODO: send com msg
-            comDataDispatch(phase_id);
+            return trafficDispatch(phase_id);
         }
     }
     else if (ctrl_mode == STRING_CTRL_CROSS_STREET)
@@ -1615,24 +1620,24 @@ bool SimulatorWidget::simualtorComdataDispatcher()
         else if (phase_type == 0x04)    // walkman phase
         {
             // TODO: send com msg
-            comDataDispatch(phase_id);
+            return trafficDispatch(phase_id);
         }
     }
     else if (ctrl_mode == STRING_CTRL_BUS_FIRST)
     {
         // TODO: send com msg
-        comDataDispatch(phase_id);
+        return trafficDispatch(phase_id);
     }
     else if (ctrl_mode == STRING_CTRL_SINGLE_ADAPT)
     {
         // TODO: send com msg
-        comDataDispatch(phase_id);
+        return trafficDispatch(phase_id);
     }
     else
     {
-        comDataDispatch(phase_id);
+        return trafficDispatch(phase_id);
     }
-    return true;
+    return false;
 }
 
 void SimulatorWidget::comDataDispatch(int phase_id)
@@ -1704,9 +1709,9 @@ QString SimulatorWidget::phaseBitsDesc(unsigned int phase_ids)
     return str.left(str.size() - 1);
 }
 
-bool SimulatorWidget::trafficDispatch()
+bool SimulatorWidget::trafficDispatch(unsigned int phase_id)
 {
-    unsigned int phase_id = curr_phase_id_label_->text().trimmed().toUInt();
+//    unsigned int phase_id = curr_phase_id_label_->text().trimmed().toUInt();
     for (int i = 0; i < car_sent_list_.size(); i++)
     {
         switch (car_sent_list_.at(i))

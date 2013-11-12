@@ -152,7 +152,7 @@ private:
     QString phaseBitsDesc(unsigned int phase_ids);
 
     // dispatch car
-    bool trafficDispatch();
+    bool trafficDispatch(unsigned int phase_id);
     bool isChannelAccessible(unsigned int phase_id, unsigned char channel_id);
     void randTraffic();
     void initTrafficDispatcher();
@@ -231,6 +231,7 @@ private:
     PhaseHandler *phase_handler_;
     bool is_first_;
     bool is_first_send_;
+    bool is_first_end_;
 
 private:
     QComboBox *port_cmb_, *baud_rate_cmb_, *data_bit_cmb_, *stop_cmb_, *parity_cmb_;
