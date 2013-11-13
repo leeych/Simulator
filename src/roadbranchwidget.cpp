@@ -155,6 +155,14 @@ void RoadBranchWidget::initPage()
     initLaneDetectorList();
     initLightStatus();
     initSidewalkDetectorList();
+    for (int i = 0; i < sidewalk_label_list_.size(); i++)
+    {
+        sidewalk_label_list_.at(i)->hide();
+    }
+    for (int i = 0; i < sidewalk_cmb_list_.size(); i++)
+    {
+        sidewalk_cmb_list_.at(i)->hide();
+    }
 
     QString qss =
             "QComboBox{border-style:none;background-color:rgb(101,101,101); color:red; text-align:center;}"

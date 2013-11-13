@@ -20,6 +20,7 @@
 #define STRING_UI_CLOSE         QObject::tr("Close")
 #define STRING_UI_SERIALPORT    QObject::tr("Serial port")
 #define STRING_UI_EXISTS_INVALID_LANEID     QObject::tr("Exists invalid lane id")
+#define STRING_UI_OPEN_CONFIG   QObject::tr("Open config file")
 
 #define STRING_UI_SEND          QObject::tr("Send msg")
 #define STRING_UI_START         QObject::tr("Start")
@@ -61,6 +62,9 @@
 #define STRING_UI_IP                QObject::tr("IP")
 #define STRING_UI_START_WITHOUT_CONN    QObject::tr("Can not start without connecting")
 #define STRING_UI_PHASE_ID_INVALID      QObject::tr("Can not start with invalid phase id")
+#define STRING_UI_CONFIG_NULL           QObject::tr("Config file returned is null")
+#define STRING_UI_DETECTOR_RETURN_NULL  QObject::tr("Detector returned null")
+#define STRING_UI_DRIVER_RETURN_NULL    QObject::tr("Driver board returned null")
 
 // SyncCommand
 #define STRING_CONNECT_HOST_REFUSED     QObject::tr("Connected host refused")
@@ -86,6 +90,7 @@
 
 // Ctrl mode desc
 #define STRING_CTRL_AUTONOMOUS          QObject::tr("Autonomous ctrl")
+#define STRING_CTRL_GIVEN_CYCLE         QObject::tr("Given cycle ctrl")
 #define STRING_CTRL_CLOSE_LIGHT         QObject::tr("Close lights ctrl")
 #define STRING_CTRL_YELLOW_FLASH        QObject::tr("Yellow flash ctrl")
 #define STRING_CTRL_ALL_RED             QObject::tr("All red ctrl")
@@ -109,7 +114,6 @@
 #define STRING_NETWORK_CFG_TEMP_SAVE        QObject::tr("Save config temp file failed. Retry?")
 #define STRING_NETWORK_PARSE_ERROR          QObject::tr("Parse network package error")
 #define STRING_NETWORK_HOST_UNREACHABLE     QObject::tr("Host unreachable")
-
 
 
 #endif // MACROSTRINGS_H

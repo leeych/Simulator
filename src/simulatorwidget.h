@@ -163,6 +163,7 @@ private:
     };
     QList<CarStatus> car_sent_list_;    // index+1 present channel_id
     QList<LightColor> channel_detector_color_list_; // index+1 present channel id
+    QList<bool> need_leave_list_;       // index+1 present channel_id
 
     void dumpComData();
     void test();
