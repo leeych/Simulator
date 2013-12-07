@@ -161,11 +161,11 @@ void SimulatorWidget::startSimulatorToggledSlot(bool checked)
         }
         int secs = timespan_spinbox_->value();
         send_msg_timer_->start(secs*1000);
-        if (need_leave_)
-        {
-            timer_->start(qrand() % 1000 + 1000);
-        }
-        txt_edit_->insertPlainText(formatComData(com_array_)+"\n");
+//        if (need_leave_)
+//        {
+//            timer_->start(qrand() % 1000 + 1000);
+//        }
+//        txt_edit_->insertPlainText(formatComData(com_array_)+"\n");
     }
     else
     {
@@ -184,7 +184,7 @@ void SimulatorWidget::sendMsgTimerTimeOutSlot()
     {
         return;
     }
-    qDebug() << "send msg time out";
+    qDebug() << "new car come";
     startSimulatorToggledSlot(true);
 }
 /* 1. 检查当前车道是否在当前相位的所控制的通道中且为可通行状态
@@ -192,18 +192,18 @@ void SimulatorWidget::sendMsgTimerTimeOutSlot()
 */
 void SimulatorWidget::timerTimeOutSlot()
 {
-    qDebug() << "send 0x02 msg time out";
     timer_->stop();
     unsigned int phase_id = curr_phase_id_label_->text().trimmed().toUInt();
-//    QList<unsigned char> channel_id_list = phase_handler_->get_phase_ctrled_channel_list(phase_id);
-    for (int i = 0; i < car_sent_list_.size(); i++)
+    for (int i = 0; i < 12; i++)
     {
-        qDebug() << "i:" << i;
-        if (isChannelAccessible(phase_id, i+1))
+        int pre_idx =  pre_lane_idx_list_.at(i);
+        if (isChannelAccessible(phase_id, i+1) && pre_idx >= 0)
         {
-            if (car_sent_list_.at(i) == Go && need_leave_list_.at(i))
+            qDebug() << "Leave--(phase_id:" << phase_id << ", channel_id:" << i+1 << ") accessible" ;
+            if ((car_sent_list_.at(i) == Go) && need_leave_list_.at(i))
             {
-                // TODO: send msg
+                qDebug() << "Leave--close pre detector:" << pre_idx+1 << ",Color:" << colorPrintable(channel_detector_color_list_.at(pre_idx))
+                         << "false, light detector:" << pre_idx+1 << "Color: Red";
                 packComData(pre_lane_idx_list_.at(i));
                 need_leave_list_[pre_lane_idx_list_.at(i)] = false;
                 com_array_[1] = 0x02 + '\0';
@@ -213,20 +213,21 @@ void SimulatorWidget::timerTimeOutSlot()
                 com_array_[3] = ms[0];
                 com_array_[4] = ms[1];
                 txt_edit_->insertPlainText(formatComData(com_array_)+"\n");
-                emit showLaneDetectorSignal(pre_lane_idx_list_.at(i), channel_detector_color_list_.at(i), false);
-                emit showLaneDetectorSignal(pre_lane_idx_list_.at(i), RoadBranchWidget::Red, true);
-                channel_detector_color_list_[i] = Off;
+                emit showLaneDetectorSignal(pre_idx, channel_detector_color_list_.at(pre_idx), false);
+                emit showLaneDetectorSignal(pre_idx, RoadBranchWidget::Red, true);
+                channel_detector_color_list_[i] = Red;
                 car_sent_list_[i] = None;
                 my_com_->write(com_array_);
             }
-            else
+            else if ((car_sent_list_.at(i) == None) && !need_leave_list_.at(i))
             {
+                qDebug() << "Leave--close only pre detector:" << pre_lane_idx_list_.at(i)+1 << ",Color:" << colorPrintable(channel_detector_color_list_.at(i)) << " false";
                 packComData(pre_lane_idx_list_.at(i));
                 need_leave_list_[pre_lane_idx_list_.at(i)] = false;
                 txt_edit_->insertPlainText(formatComData(com_array_)+"\n");
                 emit showLaneDetectorSignal(pre_lane_idx_list_.at(i), channel_detector_color_list_.at(i), false);
                 channel_detector_color_list_[i] = Off;
-                car_sent_list_[i] = None;
+                car_sent_list_[i] = Other;
                 my_com_->write(com_array_);
             }
         }
@@ -741,7 +742,7 @@ void SimulatorWidget::initComSettingLayout()
 {
     QLabel *timespan_label = new QLabel(STRING_UI_TIMESPAN + "(s):");
     timespan_spinbox_ = new QSpinBox;
-    timespan_spinbox_->setRange(2, 65535);
+    timespan_spinbox_->setRange(3, 65535);
     timespan_spinbox_->setValue(2);
     start_button_ = new QPushButton(STRING_UI_START);
     start_button_->setCheckable(true);
@@ -768,9 +769,10 @@ void SimulatorWidget::initComSettingLayout()
 
     baud_rate_cmb_->addItem("4800");
     baud_rate_cmb_->addItem("9600");
-    baud_rate_cmb_->addItem("14400");
+//    baud_rate_cmb_->addItem("14400");
     baud_rate_cmb_->addItem("19200");
-    baud_rate_cmb_->addItem("38400");
+//    baud_rate_cmb_->addItem("38400");
+    baud_rate_cmb_->addItem("115200");
     baud_rate_cmb_->setCurrentIndex(1);
 
     for (int i = 4; i < 9; i++)
@@ -1147,6 +1149,8 @@ void SimulatorWidget::packComData(int lane_index)
     com_array_.clear();
     SerialData com_data;
     QList<int> detector_id_list = road_branch_widget_->getLaneDetectorIdList();
+//    qDebug() << "detector_id_list:" << detector_id_list << endl
+//             << "curr_lane_index:" << lane_index;
     curr_lane_id_ = detector_id_list.at(lane_index);
     if (curr_lane_id_ >= 1 && curr_lane_id_ <= 48)
     {
@@ -1156,10 +1160,12 @@ void SimulatorWidget::packComData(int lane_index)
     else if (curr_lane_id_ <= 56)
     {
         com_data.type = 0x04 + '\0';
+        need_leave_list_[lane_index] = false;
     }
     else if (curr_lane_id_ <= 60)
     {
         com_data.type = 0x05 + '\0';
+        need_leave_list_[lane_index] = false;
     }
     com_data.detector_id = curr_lane_id_ + '\0';
     int secs = QDateTime::currentDateTime().toTime_t();
@@ -1191,6 +1197,10 @@ void SimulatorWidget::initMyComSetting()
     else if (baud_rate == "38400")
     {
         my_com_setting_.BaudRate = BAUD38400;
+    }
+    else if (baud_rate == "115200")
+    {
+        my_com_setting_.BaudRate = BAUD115200;
     }
 
     int data_bit = data_bit_cmb_->currentText().toInt();
@@ -1728,6 +1738,8 @@ QString SimulatorWidget::phaseBitsDesc(unsigned int phase_ids)
 
 bool SimulatorWidget::trafficDispatch(unsigned int phase_id)
 {
+    qDebug() << "dispatch-car_sent_list:";
+    dumpEnumElementList(car_sent_list_);
     for (int i = 0; i < 12; i++)
     {
         int pre_index = pre_lane_idx_list_.at(i);
@@ -1742,11 +1754,16 @@ bool SimulatorWidget::trafficDispatch(unsigned int phase_id)
             if (isChannelAccessible(phase_id, i+1))
             {
                 // TODO: dispatch car
-                if (pre_index >= 0)
+                if (pre_index >= 0 && color != Off)
                 {
                     emit showLaneDetectorSignal(pre_index, color, false);
+                    qDebug() << "dispatch-Come--close pre lane detector:" << pre_index+1 << ",Color:" << colorPrintable(color) << "false";
                 }
                 emit showLaneDetectorSignal(i, RoadBranchWidget::Green, true);
+                qDebug() << "dispatch-Come--light lane detector:" << i+1 << ",Color: Green true";
+                packComData(i);
+                my_com_->write(com_array_);
+                txt_edit_->insertPlainText(formatComData(com_array_)+"\n");
                 channel_detector_color_list_[i] = Green;
                 car_sent_list_[i] = need_leave_list_.at(i) ? Go : None;
                 pre_lane_idx_list_[i] = i;
@@ -1759,20 +1776,42 @@ bool SimulatorWidget::trafficDispatch(unsigned int phase_id)
                 if (pre_index >= 0)
                 {
                     emit showLaneDetectorSignal(pre_index, color, false);
+                    qDebug() << "Go--close detector:(lane id:" << pre_index+1 << ",Color:" << colorPrintable(color) << ") false";
                 }
                 emit showLaneDetectorSignal(i, RoadBranchWidget::Red, true);
-                packComData(i);
+                qDebug() << "Go--show detector:(lane id:" << i+1 << ",Color:Red) true";
+                if (need_leave_list_.at(i))
+                {
+                    packComData(i);
+                    com_array_[1] = 0x02 + '\0';
+                    char ms[4] = {'\0'};
+                    int secs = QDateTime::currentDateTime().toTime_t();
+                    memcpy(ms, &secs, sizeof(secs));
+                    com_array_[3] = ms[0];
+                    com_array_[4] = ms[1];
+                    need_leave_list_[i] = false;
+                }
+                else
+                {
+                    packComData(i);
+                }
+                my_com_->write(com_array_);
+                txt_edit_->insertPlainText(formatComData(com_array_)+"\n");
                 need_leave_list_[i] = false;
-                channel_detector_color_list_[i] = Off;
+                channel_detector_color_list_[i] = Red;
                 car_sent_list_[i] = None;
                 pre_lane_idx_list_[i] = i;
             }
             break;
         case None:
-            if (pre_index >= 0)
+            if (pre_index >= 0 && color != Off)
             {
                 emit showLaneDetectorSignal(pre_index, color, false);
+                car_sent_list_[pre_index] = Other;
+                qDebug() << "None--close detector:" << pre_index+1 << ",Color:" << colorPrintable(color) << "false";
             }
+            break;
+        case Other:
             break;
         default:
             break;
@@ -1782,9 +1821,10 @@ bool SimulatorWidget::trafficDispatch(unsigned int phase_id)
     QTime t = QTime::currentTime();
     qsrand(t.msec() + t.second()*1000);
     int lane_idx = qrand() % 12;
-    qDebug() << "rand lane_idx:" << lane_idx;
-    if (car_sent_list_.at(lane_idx) == Come)
+    qDebug() << "rand lane id:" << lane_idx+1;
+    if (car_sent_list_.at(lane_idx) == Go)
     {
+        qDebug() << "lane" << lane_idx+1 << " exists a car (Green)";
         return false;
     }
     car_sent_list_[lane_idx] = Come;
@@ -1794,21 +1834,22 @@ bool SimulatorWidget::trafficDispatch(unsigned int phase_id)
     case Come:
         if (isChannelAccessible(phase_id, lane_idx+1))
         {
-//            int pre_index = pre_lane_idx_list_.at(lane_idx);
-//            LightColor color = channel_detector_color_list_.at(lane_idx);
-//            if (pre_index >= 0)
-//            {
-//                road_branch_widget_->showDetectorSlot(pre_index, color, false);
-//            }
             road_branch_widget_->showDetectorSlot(lane_idx, RoadBranchWidget::Green, true);
+            qDebug() << "Come--show detector:(lane id:" << lane_idx+1 << ",Color: Green) true";
             channel_detector_color_list_[lane_idx] = Green;
             car_sent_list_[lane_idx] = need_leave_list_.at(lane_idx) ? Go : None;
             pre_lane_idx_list_[lane_idx] = lane_idx;
+            txt_edit_->insertPlainText(formatComData(com_array_)+"\n");
             my_com_->write(com_array_);
             if (need_leave_list_.at(lane_idx))
             {
                 timer_->start(qrand()%1000+1000);
             }
+        }
+        else
+        {
+            qDebug() << "car on lane id:" << lane_idx+1 << "can not access this channel";
+            car_sent_list_[lane_idx] = Other;
         }
         break;
     case Go:
@@ -1840,7 +1881,7 @@ void SimulatorWidget::randTraffic()
     QTime t = QTime::currentTime();
     qsrand(t.msec() + t.second()*1000);
     int lane_idx = qrand() % 12;
-    qDebug() << "rand lane_idx:" << lane_idx;
+//    qDebug() << "rand lane_idx:" << lane_idx;
     packComData(lane_idx);
     my_com_->write(com_array_);
 }
@@ -1849,7 +1890,7 @@ void SimulatorWidget::initTrafficDispatcher()
 {
     for (int i = 0; i < 16; i++)
     {
-        car_sent_list_.append(None);
+        car_sent_list_.append(Other);
         channel_detector_color_list_.append(Off);
         pre_lane_idx_list_.append(-1);
         need_leave_list_.append(false);
@@ -1885,4 +1926,70 @@ void SimulatorWidget::test()
     }
     file.write(com_array_);
     file.close();
+}
+
+QString SimulatorWidget::colorPrintable(SimulatorWidget::LightColor color)
+{
+    QString str;
+    switch(color)
+    {
+    case Red:
+        str = "Red";
+        break;
+    case Yellow:
+        str = "Yellow";
+        break;
+    case Green:
+        str = "Green";
+        break;
+    case Off:
+        str = "Off";
+        break;
+    case Invalid:
+        str = "Invalid";
+        break;
+    default:
+        str = "-";
+        break;
+    }
+    return str;
+}
+
+QString SimulatorWidget::carStatusPrintable(SimulatorWidget::CarStatus status)
+{
+    QString str;
+    switch (status)
+    {
+    case Come:
+        str = "Come";
+        break;
+    case Go:
+        str = "Go";
+        break;
+    case None:
+        str = "None";
+        break;
+    case Other:
+        str = "Other";
+        break;
+    default:
+        str = "-";
+        break;
+    }
+    return str;
+}
+
+void SimulatorWidget::dumpEnumElementList(const QList<SimulatorWidget::CarStatus> &list)
+{
+    int cnt = list.size();
+    if (cnt <= 0)
+    {
+        return;
+    }
+    QString str;
+    for (int i = 0; i < cnt; i++)
+    {
+        str += QString::number(i+1) + "-" + carStatusPrintable(list.at(i)) + " ";
+    }
+    qDebug() << str;
 }

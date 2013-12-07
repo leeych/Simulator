@@ -159,7 +159,7 @@ private:
 
     enum CarStatus
     {
-        Come = 0, Go = 1, None = 2
+        Come = 0, Go = 1, None = 2, Other = 3
     };
     QList<CarStatus> car_sent_list_;    // index+1 present channel_id
     QList<LightColor> channel_detector_color_list_; // index+1 present channel id
@@ -167,6 +167,9 @@ private:
 
     void dumpComData();
     void test();
+    QString colorPrintable(LightColor color);
+    QString carStatusPrintable(CarStatus status);
+    void dumpEnumElementList(const QList<CarStatus> &list);
 
 private:
     struct PortSettings my_com_setting_;

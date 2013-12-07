@@ -128,7 +128,7 @@ void RoadBranchWidget::enableDetectorIdCmbSlot(bool enable)
 
 void RoadBranchWidget::showDetectorSlot(int id, int color, bool show)
 {
-    qDebug() << "show detector id:" << id;
+//    qDebug() << "show detector id:" << id;
     if (id > 12)
     {
         showSidewalkDetector((SidewalkId)id, show);
@@ -207,19 +207,31 @@ void RoadBranchWidget::initLaneDetectorList()
         cmb->addItems(item_list);
         lane_cmb_list_.append(cmb);
     }
-
+#if 0
     cmb_rect_list_ << QRect(318,523,36,26) << QRect(0,319,36,26) << QRect(198,1,36,26) << QRect(514,197,36,26)
                    << QRect(355,523,36,26) << QRect(0,355,36,26) << QRect(162,1,36,26) << QRect(514,161,36,26)
                    << QRect(281,523,36,26) << QRect(0,283,36,26) << QRect(234,1,36,26) << QRect(514,234,36,26);
+#endif
+#if 1
+    cmb_rect_list_ << QRect(198,1,36,26) << QRect(514,197,36,26) << QRect(318,523,36,26) << QRect(0,319,36,26)
+                   << QRect(234,1,36,26) << QRect(514,234,36,26) << QRect(281,523,36,26) << QRect(0,283,36,26)
+                   << QRect(162,1,36,26) << QRect(514,161,36,26) << QRect(355,523,36,26) << QRect(0,355,36,26);
+#endif
     for (int i = 0; i < 12; i++)
     {
         lane_cmb_list_.at(i)->setGeometry(cmb_rect_list_.at(i));
         lane_cmb_list_.at(i)->setCurrentIndex(i);
     }
-
+#if 0
     detector_rect_list_ << QRect(323,485,24,24) << QRect(37,320,24,24) << QRect(202,33,24,24) << QRect(485,200,24,24)
                         << QRect(359,485,24,24) << QRect(37,356,24,24) << QRect(166,33,24,24) << QRect(485,163,24,24)
                         << QRect(285,485,24,24) << QRect(37,285,24,24) << QRect(237,33,24,24) << QRect(485,234,24,24);
+#endif
+#if 1
+    detector_rect_list_ << QRect(202,33,24,24) << QRect(485,200,24,24) << QRect(323,485,24,24) << QRect(37,320,24,24)
+                        << QRect(237,33,24,24) << QRect(485,234,24,24) << QRect(285,485,24,24) << QRect(37,285,24,24)
+                        << QRect(166,33,24,24) << QRect(485,163,24,24) << QRect(359,485,24,24) << QRect(37,356,24,24);
+#endif
     for (int i = 0; i < detector_rect_list_.size()*2; i++)
     {
         QLabel *label = new QLabel(this);
@@ -353,12 +365,15 @@ void RoadBranchWidget::initLightList()
 
 QList<int> &RoadBranchWidget::getLaneDetectorIdList()
 {
-//    lane_detector_id_list_.clear();
-    QList<int> empty_list;
-    lane_detector_id_list_.swap(empty_list);
+    lane_detector_id_list_.clear();
     for (int i = 0; i < lane_cmb_list_.size(); i++)
     {
         int id = lane_cmb_list_.at(i)->currentText().toInt();
+        lane_detector_id_list_.append(id);
+    }
+    for (int i = 0; i < sidewalk_cmb_list_.size(); i++)
+    {
+        int id = sidewalk_cmb_list_.at(i)->currentText().toInt();
         lane_detector_id_list_.append(id);
     }
     return lane_detector_id_list_;
@@ -471,7 +486,7 @@ void RoadBranchWidget::showLaneDetector(int id, RoadBranchWidget::LightColor col
     {
         return;
     }
-    qDebug() << "show lane detector index:" << index;
+//    qDebug() << "show lane detector index:" << index;
     switch (color)
     {
     case Green:
